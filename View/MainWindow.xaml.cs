@@ -1,0 +1,325 @@
+﻿using ExamScheduleApp.Model;
+using Word = Microsoft.Office.Interop.Word;
+using ExamScheduleApp.View;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Windows;
+using System.Windows.Controls;
+using System.Reflection;
+
+namespace ExamScheduleApp
+{
+    /// <summary>
+    /// Логика взаимодействия для MainWindow.xaml
+    /// </summary>
+    public partial class MainWindow : Window
+    {
+        private List<Teacher> teachers;
+        private List<Subject> subjects;
+        private string dataFolder = "Data";
+        private ObservableCollection<ExamSchedule> exams = new ObservableCollection<ExamSchedule>();
+
+        public string ReceivedData { get; set; }
+
+        public MainWindow()
+        {
+            InitializeComponent();
+            LoadItemsFromFile("C:\\Users\\Vitaliy\\Source\\Repos\\ExamScheduleApp\\Data\\teachers.txt", cbTeachers);
+            LoadItemsFromFile("C:\\Users\\Vitaliy\\Source\\Repos\\ExamScheduleApp\\Data\\teachers.txt", SecondTeacherCB);
+            LoadItemsFromFile("C:\\Users\\Vitaliy\\Source\\Repos\\ExamScheduleApp\\Data\\disciplines.txt", cbSubjects);
+            LoadItemsFromFile("C:\\Users\\Vitaliy\\Source\\Repos\\ExamScheduleApp\\Data\\groups.txt", GroupComboBox);
+        }
+
+        private void InitializeData()
+        {
+            teachers = new List<Teacher>();
+            subjects = new List<Subject>();
+
+            // Создаем папку для данных если не существует
+            if (!Directory.Exists(dataFolder))
+            {
+                Directory.CreateDirectory(dataFolder);
+            }
+        }
+
+
+
+        private void LoadItemsFromFile(string filePath, ComboBox comboBox)
+        {
+            comboBox.Items.Clear();
+                try
+                {
+                    
+                    // Проверяем существование файла
+                    if (!File.Exists(filePath))
+                    {
+                        MessageBox.Show($"Файл {filePath} не найден");
+                        return;
+                    }
+                    
+                
+                // Читаем все строки из файла
+                string[] lines = File.ReadAllLines(filePath, Encoding.UTF8);
+
+                    // Добавляем каждую строку в ComboBox
+                    foreach (string line in lines)
+                    {
+                        if (!string.IsNullOrWhiteSpace(line))
+                        {
+                            comboBox.Items.Add(line.Trim());
+                        }
+                    }
+
+                    // Устанавливаем первый элемент как выбранный (опционально)
+                    if (comboBox.Items.Count > 0)
+                        comboBox.SelectedIndex = 0;
+                        
+            }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка при чтении файла: {ex.Message}");
+                }
+            }
+
+        // Добавление преподавателя
+        private void AddTeacher_Click(object sender, RoutedEventArgs e)
+        {
+            Window addWindow = new AddWindow("фамилию преподавателя");
+
+            bool? result = addWindow.ShowDialog();
+
+
+            string filePath = "C:\\Users\\Vitaliy\\Source\\Repos\\ExamScheduleApp\\Data\\teachers.txt";
+            string newLine = AddWindow.data.ToUpper();
+            try
+            {
+                List<string> lines = new List<string>();
+
+                // Чтение существующих строк, если файл существует
+                if (File.Exists(filePath))
+                {
+                    lines = File.ReadAllLines(filePath).ToList();
+                }
+
+                // Добавление новой строки
+                if (!string.IsNullOrWhiteSpace(newLine))
+                {
+                    lines.Add(newLine.Trim());
+                }
+
+                // Сортировка строк в алфавитном порядке
+                lines.Sort();
+
+                //Удаление дубликатов
+                var uniqueLines = new HashSet<string>(lines);
+
+                // Запись отсортированных строк обратно в файл
+                File.WriteAllLines(filePath, uniqueLines);
+                LoadItemsFromFile(filePath, cbTeachers);
+                LoadItemsFromFile(filePath, SecondTeacherCB);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при работе с файлом: {ex.Message}", "Ошибка",
+                                MessageBoxButton.OK, MessageBoxImage.Error);
+                throw;
+            }
+            
+        }
+
+        // Добавление дисциплины
+        private void AddSubject_Click(object sender, RoutedEventArgs e)
+        {
+            Window addWindow = new AddWindow("дисциплину");
+
+            bool? result = addWindow.ShowDialog();
+
+
+            string filePath = "C:\\Users\\Vitaliy\\Source\\Repos\\ExamScheduleApp\\Data\\disciplines.txt";
+            string newLine = AddWindow.data;
+            try
+            {
+                List<string> lines = new List<string>();
+
+                // Чтение существующих строк, если файл существует
+                if (File.Exists(filePath))
+                {
+                    lines = File.ReadAllLines(filePath).ToList();
+                }
+
+                // Добавление новой строки
+                if (!string.IsNullOrWhiteSpace(newLine))
+                {
+                    lines.Add(newLine.Trim());
+                }
+
+                // Сортировка строк в алфавитном порядке
+                lines.Sort();
+
+                //Удаление дубликатов
+                var uniqueLines = new HashSet<string>(lines);
+
+                // Запись отсортированных строк обратно в файл
+                File.WriteAllLines(filePath, uniqueLines);
+                LoadItemsFromFile(filePath, cbSubjects);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при работе с файлом: {ex.Message}", "Ошибка",
+                              MessageBoxButton.OK, MessageBoxImage.Error);
+                throw;
+            }
+        }
+
+        private void UpdateStatus(string message)
+        {
+            tbStatus.Text = $"{DateTime.Now:HH:mm:ss}: {message}";
+        }
+
+        private void AddExam(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string surname = cbTeachers.SelectedItem.ToString();
+                string secondSurname = SecondTeacherCB.SelectedItem.ToString();
+                DateTime? date = dpExamDate.SelectedDate;
+                string subject = cbSubjects.SelectedItem.ToString();
+                string group = GroupComboBox.SelectedItem.ToString();
+                string time = txtTime.Text;
+                string cabinet = txtClassroom.Text;
+                string type = TypeComboBox.SelectedItem.ToString().Replace("System.Windows.Controls.ComboBoxItem: ", "");
+
+
+                ExamSchedule exam = new ExamSchedule(surname, secondSurname, date, subject, group, time, 
+                    cabinet, type);
+
+                exams.Add(exam);
+
+                ExamsDataGrid.ItemsSource = exams;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Не все поля заполнены!");
+            }
+           
+        }
+
+        private void GenerateWord_Click(object sender, RoutedEventArgs e)
+        {
+            // Создаем экземпляр Word
+            Word.Application wordApp = new Word.Application();
+            Word.Document doc = wordApp.Documents.Add();
+
+            try
+            {
+                int rowCount = ExamsDataGrid.Items.Count;
+                int columnCount = ExamsDataGrid.Columns.Count;
+
+                // Добавляем строку для заголовков
+                Word.Table wordTable = doc.Tables.Add(
+                    doc.Range(doc.Content.End - 1),
+                    rowCount + 1,
+                    columnCount,
+                    Word.WdDefaultTableBehavior.wdWord9TableBehavior,
+                    Word.WdAutoFitBehavior.wdAutoFitWindow
+                );
+
+                wordTable.Range.Font.Name = "Times New Roman";
+                wordTable.Range.Font.Size = 12;
+                wordTable.Range.Font.Bold = 0; // 0 - не жирный, 1 - жирный
+                wordTable.Range.Font.Italic = 0; // 0 - не курсив, 1 - курсив
+                wordTable.Range.Font.Color = Word.WdColor.wdColorBlack;
+                wordTable.Borders.Enable = 0;
+
+                // Заполняем данные
+                for (int row = 0; row < rowCount; row++)
+                {
+                    var item = ExamsDataGrid.Items[row];
+                    for (int col = 0; col < columnCount; col++)
+                    {
+                        var cellValue = GetCellValue(item, ExamsDataGrid.Columns[col]);
+                        wordTable.Cell(row + 2, col + 1).Range.Text = cellValue?.ToString() ?? "";
+                    }
+                }
+
+                // Форматирование таблицы
+                wordTable.Borders.Enable = 1;
+                wordTable.Range.Font.Size = 10;
+
+                // Сохраняем документ
+                doc.SaveAs2("C:\\Users\\Vitaliy\\Desktop\\Экзамены");
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+            finally
+            {
+                doc.Close();
+                wordApp.Quit();
+            }
+        }
+
+        private object GetCellValue(object item, DataGridColumn dataGridColumn)
+        {
+            if (dataGridColumn is DataGridBoundColumn boundColumn)
+            {
+                var binding = boundColumn.Binding as System.Windows.Data.Binding;
+                if (binding?.Path != null)
+                {
+                    string propertyName = binding.Path.Path;
+                    PropertyInfo prop = item.GetType().GetProperty(propertyName);
+                    return prop?.GetValue(item);
+                }
+            }
+            return null;
+        }
+
+        private void AddGroup_Click(object sender, RoutedEventArgs e)
+        {
+            Window addWindow = new AddWindow("группу");
+
+            bool? result = addWindow.ShowDialog();
+
+
+            string filePath = "C:\\Users\\Vitaliy\\Source\\Repos\\ExamScheduleApp\\Data\\groups.txt";
+            string newLine = AddWindow.data;
+            try
+            {
+                List<string> lines = new List<string>();
+
+                // Чтение существующих строк, если файл существует
+                if (File.Exists(filePath))
+                {
+                    lines = File.ReadAllLines(filePath).ToList();
+                }
+
+                // Добавление новой строки
+                if (!string.IsNullOrWhiteSpace(newLine))
+                {
+                    lines.Add(newLine.Trim());
+                }
+
+                // Сортировка строк в алфавитном порядке
+                lines.Sort();
+
+                //Удаление дубликатов
+                var uniqueLines = new HashSet<string>(lines);
+
+                // Запись отсортированных строк обратно в файл
+                File.WriteAllLines(filePath, uniqueLines);
+                LoadItemsFromFile(filePath, GroupComboBox);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при работе с файлом: {ex.Message}", "Ошибка",
+                              MessageBoxButton.OK, MessageBoxImage.Error);
+                throw;
+            }
+        }
+    }
+}
