@@ -247,7 +247,10 @@ namespace ExamScheduleApp
                 wordTable.Range.Font.Bold = 0; // 0 - не жирный, 1 - жирный
                 wordTable.Range.Font.Italic = 0; // 0 - не курсив, 1 - курсив
                 wordTable.Range.Font.Color = Word.WdColor.wdColorBlack;
+
                 wordTable.Borders.Enable = 0;
+                wordTable.Borders.InsideLineStyle = Word.WdLineStyle.wdLineStyleNone;
+                wordTable.Borders.OutsideLineStyle = Word.WdLineStyle.wdLineStyleNone;
 
                 // Заполняем данные
                 for (int row = 0; row < rowCount; row++)
@@ -261,7 +264,6 @@ namespace ExamScheduleApp
                 }
 
                 // Форматирование таблицы
-                wordTable.Borders.Enable = 1;
                 wordTable.Range.Font.Size = 10;
 
                 // Сохраняем документ
