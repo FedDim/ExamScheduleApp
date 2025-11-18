@@ -17,10 +17,10 @@ namespace ExamScheduleApp
     /// </summary>
     public partial class MainWindow : Window
     {
-        private List<Teacher> teachers;
-        private List<Subject> subjects;
-        private string dataFolder = "Data";
-        private ObservableCollection<ExamSchedule> exams = new ObservableCollection<ExamSchedule>();
+        private List<Teacher> _teachers;
+        private List<Subject> _subjects;
+        private string _dataFolder = "Data";
+        private ObservableCollection<ExamSchedule> _exams = new ObservableCollection<ExamSchedule>();
 
         public string ReceivedData { get; set; }
 
@@ -35,13 +35,13 @@ namespace ExamScheduleApp
 
         private void InitializeData()
         {
-            teachers = new List<Teacher>();
-            subjects = new List<Subject>();
+            _teachers = new List<Teacher>();
+            _subjects = new List<Subject>();
 
             // Создаем папку для данных если не существует
-            if (!Directory.Exists(dataFolder))
+            if (!Directory.Exists(_dataFolder))
             {
-                Directory.CreateDirectory(dataFolder);
+                Directory.CreateDirectory(_dataFolder);
             }
         }
 
@@ -180,30 +180,46 @@ namespace ExamScheduleApp
 
         private void AddExam(object sender, RoutedEventArgs e)
         {
-            try
+            string surname = cbTeachers.SelectedItem.ToString();
+            string secondSurname = SecondTeacherCB.SelectedItem.ToString();
+            DateTime? date = dpExamDate.SelectedDate;
+            string subject = cbSubjects.SelectedItem.ToString();
+            string group = GroupComboBox.SelectedItem.ToString();
+            string time = txtTime.Text;
+            string cabinet = txtClassroom.Text;
+            string type = TypeComboBox.SelectedItem != null ? TypeComboBox.SelectedItem.ToString().Replace("System.Windows.Controls.ComboBoxItem: ", "") : string.Empty;
+
+            string checkResult = CheckEnteredFileds(surname, secondSurname, date, subject, group, time, cabinet, type);
+
+            if (!checkResult.Equals(string.Empty))
             {
-                string surname = cbTeachers.SelectedItem.ToString();
-                string secondSurname = SecondTeacherCB.SelectedItem.ToString();
-                DateTime? date = dpExamDate.SelectedDate;
-                string subject = cbSubjects.SelectedItem.ToString();
-                string group = GroupComboBox.SelectedItem.ToString();
-                string time = txtTime.Text;
-                string cabinet = txtClassroom.Text;
-                string type = TypeComboBox.SelectedItem.ToString().Replace("System.Windows.Controls.ComboBoxItem: ", "");
-
-
-                ExamSchedule exam = new ExamSchedule(surname, secondSurname, date, subject, group, time,
-                    cabinet, type);
-
-                exams.Add(exam);
-
-                ExamsDataGrid.ItemsSource = exams;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Не все поля заполнены!");
+                MessageBox.Show(checkResult);
+                return;
             }
 
+            ExamSchedule exam = new ExamSchedule(surname, secondSurname, date, subject, group, time, cabinet, type);
+
+            _exams.Add(exam);
+
+            ExamsDataGrid.ItemsSource = _exams;
+
+        }
+
+        private string CheckEnteredFileds(string surname, string secondSurname, DateTime? date, string subject, string group, string time, string cabinet, string type)
+        {
+            string checkResult = string.Empty;
+
+            if (surname.Equals(string.Empty)) checkResult += "Не выбрана Фамилия первого преподователя\n";
+            if (secondSurname.Equals(string.Empty)) checkResult += "Не выбрана Фамилия второго преподователя\n";
+            if (date is null) checkResult += "Не выбрана дата проведения\n";
+            if (subject.Equals(string.Empty)) checkResult += "Не выбрана Дисциплина\n";
+            if (time.Equals(string.Empty)) checkResult += "Не заполнено Время\n";
+            if (cabinet.Equals(string.Empty)) checkResult += "Не заполнен Номер Кaбинета\n";
+            if (type.Equals(string.Empty)) checkResult += "Не выбран Тип\n";
+
+            if (!checkResult.Equals(string.Empty)) checkResult = "Не все данные заполены : \n" + checkResult;
+
+            return checkResult;
         }
 
         private void GenerateWord_Click(object sender, RoutedEventArgs e)
