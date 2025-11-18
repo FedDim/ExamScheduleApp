@@ -1,15 +1,14 @@
 ﻿using ExamScheduleApp.Model;
-using Word = Microsoft.Office.Interop.Word;
-using ExamScheduleApp.View;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Reflection;
+using Word = Microsoft.Office.Interop.Word;
 
 namespace ExamScheduleApp
 {
@@ -28,10 +27,10 @@ namespace ExamScheduleApp
         public MainWindow()
         {
             InitializeComponent();
-            LoadItemsFromFile("C:\\Users\\Vitaliy\\Source\\Repos\\ExamScheduleApp\\Data\\teachers.txt", cbTeachers);
-            LoadItemsFromFile("C:\\Users\\Vitaliy\\Source\\Repos\\ExamScheduleApp\\Data\\teachers.txt", SecondTeacherCB);
-            LoadItemsFromFile("C:\\Users\\Vitaliy\\Source\\Repos\\ExamScheduleApp\\Data\\disciplines.txt", cbSubjects);
-            LoadItemsFromFile("C:\\Users\\Vitaliy\\Source\\Repos\\ExamScheduleApp\\Data\\groups.txt", GroupComboBox);
+            LoadItemsFromFile(GetFilePathFromData("teachers.txt"), cbTeachers);
+            LoadItemsFromFile(GetFilePathFromData("teachers.txt"), SecondTeacherCB);
+            LoadItemsFromFile(GetFilePathFromData("disciplines.txt"), cbSubjects);
+            LoadItemsFromFile(GetFilePathFromData("groups.txt"), GroupComboBox);
         }
 
         private void InitializeData()
@@ -51,39 +50,39 @@ namespace ExamScheduleApp
         private void LoadItemsFromFile(string filePath, ComboBox comboBox)
         {
             comboBox.Items.Clear();
-                try
+            try
+            {
+
+                // Проверяем существование файла
+                if (!File.Exists(filePath))
                 {
-                    
-                    // Проверяем существование файла
-                    if (!File.Exists(filePath))
-                    {
-                        MessageBox.Show($"Файл {filePath} не найден");
-                        return;
-                    }
-                    
-                
+                    MessageBox.Show($"Файл {filePath} не найден");
+                    return;
+                }
+
+
                 // Читаем все строки из файла
                 string[] lines = File.ReadAllLines(filePath, Encoding.UTF8);
 
-                    // Добавляем каждую строку в ComboBox
-                    foreach (string line in lines)
-                    {
-                        if (!string.IsNullOrWhiteSpace(line))
-                        {
-                            comboBox.Items.Add(line.Trim());
-                        }
-                    }
-
-                    // Устанавливаем первый элемент как выбранный (опционально)
-                    if (comboBox.Items.Count > 0)
-                        comboBox.SelectedIndex = 0;
-                        
-            }
-                catch (Exception ex)
+                // Добавляем каждую строку в ComboBox
+                foreach (string line in lines)
                 {
-                    MessageBox.Show($"Ошибка при чтении файла: {ex.Message}");
+                    if (!string.IsNullOrWhiteSpace(line))
+                    {
+                        comboBox.Items.Add(line.Trim());
+                    }
                 }
+
+                // Устанавливаем первый элемент как выбранный (опционально)
+                if (comboBox.Items.Count > 0)
+                    comboBox.SelectedIndex = 0;
+
             }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при чтении файла: {ex.Message}");
+            }
+        }
 
         // Добавление преподавателя
         private void AddTeacher_Click(object sender, RoutedEventArgs e)
@@ -92,8 +91,7 @@ namespace ExamScheduleApp
 
             bool? result = addWindow.ShowDialog();
 
-
-            string filePath = "C:\\Users\\Vitaliy\\Source\\Repos\\ExamScheduleApp\\Data\\teachers.txt";
+            string filePath = GetFilePathFromData("teachers.txt");
             string newLine = AddWindow.data.ToUpper();
             try
             {
@@ -128,7 +126,7 @@ namespace ExamScheduleApp
                                 MessageBoxButton.OK, MessageBoxImage.Error);
                 throw;
             }
-            
+
         }
 
         // Добавление дисциплины
@@ -139,7 +137,7 @@ namespace ExamScheduleApp
             bool? result = addWindow.ShowDialog();
 
 
-            string filePath = "C:\\Users\\Vitaliy\\Source\\Repos\\ExamScheduleApp\\Data\\disciplines.txt";
+            string filePath = GetFilePathFromData("disciplines.txt");
             string newLine = AddWindow.data;
             try
             {
@@ -194,7 +192,7 @@ namespace ExamScheduleApp
                 string type = TypeComboBox.SelectedItem.ToString().Replace("System.Windows.Controls.ComboBoxItem: ", "");
 
 
-                ExamSchedule exam = new ExamSchedule(surname, secondSurname, date, subject, group, time, 
+                ExamSchedule exam = new ExamSchedule(surname, secondSurname, date, subject, group, time,
                     cabinet, type);
 
                 exams.Add(exam);
@@ -205,7 +203,7 @@ namespace ExamScheduleApp
             {
                 MessageBox.Show("Не все поля заполнены!");
             }
-           
+
         }
 
         private void GenerateWord_Click(object sender, RoutedEventArgs e)
@@ -251,9 +249,11 @@ namespace ExamScheduleApp
                 wordTable.Range.Font.Size = 10;
 
                 // Сохраняем документ
-                doc.SaveAs2("C:\\Users\\Vitaliy\\Desktop\\Экзамены");
+                string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Экзамены");
+                doc.SaveAs2(filePath);
+                MessageBox.Show($"Файл успешно сохранён по пути : {filePath}");
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show(ex.Message);
             }
@@ -286,7 +286,7 @@ namespace ExamScheduleApp
             bool? result = addWindow.ShowDialog();
 
 
-            string filePath = "C:\\Users\\Vitaliy\\Source\\Repos\\ExamScheduleApp\\Data\\groups.txt";
+            string filePath = GetFilePathFromData("groups.txt");
             string newLine = AddWindow.data;
             try
             {
@@ -320,6 +320,11 @@ namespace ExamScheduleApp
                               MessageBoxButton.OK, MessageBoxImage.Error);
                 throw;
             }
+        }
+
+        private string GetFilePathFromData(string file)
+        {
+            return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", file);
         }
     }
 }
