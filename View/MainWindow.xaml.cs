@@ -184,13 +184,14 @@ namespace ExamScheduleApp
             string surname = cbTeachers.SelectedItem.ToString();
             string secondSurname = SecondTeacherCB.SelectedItem.ToString();
             DateTime? date = dpExamDate.SelectedDate;
+            string dateString = date?.ToString("dd.MM.yyyy") ?? string.Empty;
             string subject = cbSubjects.SelectedItem.ToString();
             string group = GroupComboBox.SelectedItem.ToString();
-            string time = txtTime.Text;
+            string time = TimeComboBox.SelectedItem != null ? TimeComboBox.SelectedItem.ToString().Replace("System.Windows.Controls.ComboBoxItem: ", "") : string.Empty;
             string cabinet = txtClassroom.Text;
             string type = TypeComboBox.SelectedItem != null ? TypeComboBox.SelectedItem.ToString().Replace("System.Windows.Controls.ComboBoxItem: ", "") : string.Empty;
 
-            string checkResult = CheckEnteredFileds(surname, secondSurname, date, subject, group, time, cabinet, type);
+            string checkResult = CheckEnteredFileds(surname, secondSurname, dateString, subject, group, time, cabinet, type);
 
             if (!checkResult.Equals(string.Empty))
             {
@@ -198,7 +199,7 @@ namespace ExamScheduleApp
                 return;
             }
 
-            ExamSchedule exam = new ExamSchedule(surname, secondSurname, date, subject, group, time, cabinet, type);
+            ExamSchedule exam = new ExamSchedule(surname, secondSurname, dateString, subject, group, time, cabinet, type);
 
             _exams.Add(exam);
 
@@ -206,13 +207,13 @@ namespace ExamScheduleApp
 
         }
 
-        private string CheckEnteredFileds(string surname, string secondSurname, DateTime? date, string subject, string group, string time, string cabinet, string type)
+        private string CheckEnteredFileds(string surname, string secondSurname, string date, string subject, string group, string time, string cabinet, string type)
         {
             string checkResult = string.Empty;
 
             if (surname.Equals(string.Empty)) checkResult += "Не выбрана Фамилия первого преподователя\n";
             if (secondSurname.Equals(string.Empty)) checkResult += "Не выбрана Фамилия второго преподователя\n";
-            if (date is null) checkResult += "Не выбрана дата проведения\n";
+            if (date.Equals(string.Empty)) checkResult += "Не выбрана дата проведения\n";
             if (subject.Equals(string.Empty)) checkResult += "Не выбрана Дисциплина\n";
             if (time.Equals(string.Empty)) checkResult += "Не заполнено Время\n";
             if (cabinet.Equals(string.Empty)) checkResult += "Не заполнен Номер Кaбинета\n";
@@ -325,7 +326,6 @@ namespace ExamScheduleApp
                 Word.WdAutoFitBehavior.wdAutoFitWindow
             );
 
-
             wordTable.Range.Font.Name = "Times New Roman";
             wordTable.Range.Font.Size = 12;
             wordTable.Range.Font.Bold = 0; // 0 - не жирный, 1 - жирный
@@ -394,7 +394,6 @@ namespace ExamScheduleApp
 
             return result == true ? saveFileDialog.FileName : null;
         }
-
 
         private void AddGroup_Click(object sender, RoutedEventArgs e)
         {

@@ -17,35 +17,35 @@
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="FontSize" Value="18"/>
         </Style>
-        
+
         <Style x:Key="ModernButtonStyle" TargetType="Button">
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-                <Setter Property="Background" Value="#2196F3"/>
-                <Setter Property="Foreground" Value="White"/>
-                <Setter Property="BorderThickness" Value="0"/>
-                <Setter Property="Padding" Value="15,8"/>
-                <Setter Property="FontSize" Value="18"/>
-                <Setter Property="FontWeight" Value="SemiBold"/>
-                <Setter Property="Cursor" Value="Hand"/>
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="Button">
-                            <Border x:Name="border" 
+            <Setter Property="Background" Value="#2196F3"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" 
                             Background="{TemplateBinding Background}" 
                             CornerRadius="6"
                             Padding="{TemplateBinding Padding}">
-                                <ContentPresenter HorizontalAlignment="Center" 
+                            <ContentPresenter HorizontalAlignment="Center" 
                                           VerticalAlignment="Center"/>
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="border" Property="Background" Value="#1976D2"/>
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Style>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#1976D2"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
         <Style x:Key="ModernComboBoxStyle" TargetType="ComboBox">
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
@@ -125,7 +125,17 @@
                 <ComboBox x:Name="GroupComboBox" Style ="{StaticResource ModernComboBoxStyle}" Margin="0,5"/>
 
                 <TextBlock Text="Время:" Margin="0,5" FontSize="14"/>
-                <TextBox x:Name="txtTime" Text="10:00" Margin="0,5"/>
+                <ComboBox x:Name="TimeComboBox" Style="{StaticResource ModernComboBoxStyle}" Margin="0,5">
+
+                    <ComboBoxItem Content="9:00"/>
+                    <ComboBoxItem Content="11:00"/>
+                    <ComboBoxItem Content="13:00"/>
+                    <ComboBoxItem Content="15:00"/>
+                    <ComboBoxItem Content="16:20"/>
+
+                </ComboBox>
+
+                <!--<TextBox x:Name="txtTime" Text="10:00" Margin="0,5"/>-->
 
                 <TextBlock Text="Аудитория:" Margin="0,5" FontSize="14"/>
                 <TextBox x:Name="txtClassroom" Margin="0,5"
