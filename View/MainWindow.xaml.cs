@@ -1,4 +1,5 @@
 ﻿using ExamScheduleApp.Model;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -230,46 +231,27 @@ namespace ExamScheduleApp
 
             try
             {
-                int rowCount = ExamsDataGrid.Items.Count;
-                int columnCount = ExamsDataGrid.Columns.Count;
+                // Настройка полей документа (в пунктах) ~3 см
+                doc.PageSetup.LeftMargin = 85;
+                doc.PageSetup.RightMargin = 85;
+                doc.PageSetup.TopMargin = 85;
+                doc.PageSetup.BottomMargin = 85;
 
-                // Добавляем строку для заголовков
-                Word.Table wordTable = doc.Tables.Add(
-                    doc.Range(doc.Content.End - 1),
-                    rowCount + 1,
-                    columnCount,
-                    Word.WdDefaultTableBehavior.wdWord9TableBehavior,
-                    Word.WdAutoFitBehavior.wdAutoFitWindow
-                );
+                // Создание шапки документа
+                CreateHeader(doc);
 
-                wordTable.Range.Font.Name = "Times New Roman";
-                wordTable.Range.Font.Size = 12;
-                wordTable.Range.Font.Bold = 0; // 0 - не жирный, 1 - жирный
-                wordTable.Range.Font.Italic = 0; // 0 - не курсив, 1 - курсив
-                wordTable.Range.Font.Color = Word.WdColor.wdColorBlack;
+                // Добавление таблицы с данными
+                CreateExamTable(doc);
 
-                wordTable.Borders.Enable = 0;
-                wordTable.Borders.InsideLineStyle = Word.WdLineStyle.wdLineStyleNone;
-                wordTable.Borders.OutsideLineStyle = Word.WdLineStyle.wdLineStyleNone;
+                string documentsPath = GetDocumentsFolderPath();
 
-                // Заполняем данные
-                for (int row = 0; row < rowCount; row++)
+                string filePath = ShowSaveFileDialog(documentsPath);
+
+                if (!string.IsNullOrEmpty(filePath))
                 {
-                    var item = ExamsDataGrid.Items[row];
-                    for (int col = 0; col < columnCount; col++)
-                    {
-                        var cellValue = GetCellValue(item, ExamsDataGrid.Columns[col]);
-                        wordTable.Cell(row + 2, col + 1).Range.Text = cellValue?.ToString() ?? "";
-                    }
+                    doc.SaveAs2(filePath);
+                    MessageBox.Show($"Файл успешно сохранён по пути : {filePath}");
                 }
-
-                // Форматирование таблицы
-                wordTable.Range.Font.Size = 10;
-
-                // Сохраняем документ
-                string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Экзамены");
-                doc.SaveAs2(filePath);
-                MessageBox.Show($"Файл успешно сохранён по пути : {filePath}");
             }
             catch (Exception ex)
             {
@@ -277,9 +259,96 @@ namespace ExamScheduleApp
             }
             finally
             {
-                doc.Close();
-                wordApp.Quit();
+                if (doc != null)
+                {
+                    doc.Close(false);
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(doc);
+                }
+
+                if (wordApp != null)
+                {
+                    wordApp.Quit(false);
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(wordApp);
+                }
             }
+        }
+
+        private void CreateHeader(Word.Document doc)
+        {
+            // Первый параграф - "Утверждаю:"
+            Word.Paragraph p1 = doc.Content.Paragraphs.Add();
+            p1.Range.Text = "Утверждаю:";
+            p1.Format.Alignment = Word.WdParagraphAlignment.wdAlignParagraphRight;
+            p1.Range.Font.Name = "Times New Roman";
+            p1.Range.Font.Size = 12;
+            p1.Range.InsertParagraphAfter();
+
+            // Второй параграф - должность
+            Word.Paragraph p2 = doc.Content.Paragraphs.Add();
+            p2.Range.Text = "директор СПб ГБПОУ \"АТТ\"";
+            p2.Format.Alignment = Word.WdParagraphAlignment.wdAlignParagraphRight;
+            p2.Range.Font.Name = "Times New Roman";
+            p2.Range.Font.Size = 12;
+            p2.Range.InsertParagraphAfter();
+
+            // Третий параграф - подпись
+            Word.Paragraph p3 = doc.Content.Paragraphs.Add();
+            p3.Range.Text = "___________________ Корабельников С.К.";
+            p3.Format.Alignment = Word.WdParagraphAlignment.wdAlignParagraphRight;
+            p3.Range.Font.Name = "Times New Roman";
+            p3.Range.Font.Size = 12;
+            p3.Format.SpaceAfter = 24; // Больший отступ после подписи
+            p3.Range.InsertParagraphAfter();
+
+            // Четвертый параграф - заголовок
+            Word.Paragraph p4 = doc.Content.Paragraphs.Add();
+            p4.Range.Text = "Расписание промежуточной аттестации (по дате)";
+            p4.Format.Alignment = Word.WdParagraphAlignment.wdAlignParagraphCenter;
+            p4.Range.Font.Name = "Times New Roman";
+            p4.Range.Font.Size = 18;
+            p4.Range.Font.Bold = 1;
+            p4.Format.SpaceAfter = 18;
+            p4.Range.InsertParagraphAfter();
+        }
+
+        private void CreateExamTable(Word.Document doc)
+        {
+            int rowCount = ExamsDataGrid.Items.Count;
+            int columnCount = ExamsDataGrid.Columns.Count;
+
+            // Добавляем строку для заголовков
+            Word.Table wordTable = doc.Tables.Add(
+                doc.Range(doc.Content.End - 1),
+                rowCount + 1,
+                columnCount,
+                Word.WdDefaultTableBehavior.wdWord9TableBehavior,
+                Word.WdAutoFitBehavior.wdAutoFitWindow
+            );
+
+
+            wordTable.Range.Font.Name = "Times New Roman";
+            wordTable.Range.Font.Size = 12;
+            wordTable.Range.Font.Bold = 0; // 0 - не жирный, 1 - жирный
+            wordTable.Range.Font.Italic = 0; // 0 - не курсив, 1 - курсив
+            wordTable.Range.Font.Color = Word.WdColor.wdColorBlack;
+
+            wordTable.Borders.Enable = 0;
+            wordTable.Borders.InsideLineStyle = Word.WdLineStyle.wdLineStyleNone;
+            wordTable.Borders.OutsideLineStyle = Word.WdLineStyle.wdLineStyleNone;
+
+            // Заполняем данные
+            for (int row = 0; row < rowCount; row++)
+            {
+                var item = ExamsDataGrid.Items[row];
+                for (int col = 0; col < columnCount; col++)
+                {
+                    var cellValue = GetCellValue(item, ExamsDataGrid.Columns[col]);
+                    wordTable.Cell(row + 2, col + 1).Range.Text = cellValue?.ToString() ?? "";
+                }
+            }
+
+            // Форматирование таблицы
+            wordTable.Range.Font.Size = 10;
         }
 
         private object GetCellValue(object item, DataGridColumn dataGridColumn)
@@ -296,6 +365,36 @@ namespace ExamScheduleApp
             }
             return null;
         }
+
+        private string GetDocumentsFolderPath()
+        {
+            string documentsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Documents");
+
+            if (!Directory.Exists(documentsPath))
+            {
+                Directory.CreateDirectory(documentsPath);
+            }
+
+            return documentsPath;
+        }
+
+        private string ShowSaveFileDialog(string initalDirectory)
+        {
+            var saveFileDialog = new SaveFileDialog
+            {
+                InitialDirectory = initalDirectory,
+                FileName = $"Экзамены_{DateTime.Now:dd.MM.yyyy}",
+                Filter = "Word Документы (*.docx)|*.docx|Все файлы (*.*)|*.*",
+                DefaultExt = ".docx",
+                AddExtension = true,
+                Title = "Сохранить документ Word"
+            };
+
+            bool? result = saveFileDialog.ShowDialog();
+
+            return result == true ? saveFileDialog.FileName : null;
+        }
+
 
         private void AddGroup_Click(object sender, RoutedEventArgs e)
         {
