@@ -8,7 +8,8 @@
         Title="Добавление данных" 
         Height="300" 
         Width="500"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        KeyDown="Window_KeyDown">
     <Window.Resources>
         <Style x:Key="ModernButtonStyle" TargetType="Button">
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>

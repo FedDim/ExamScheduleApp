@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows;
+using System.Windows.Input;
 
 namespace ExamScheduleApp
 {
@@ -48,6 +49,20 @@ namespace ExamScheduleApp
                     break;
             }
 
+            Loaded += (s, e) => AddTextBox.Focus();
+        }
+
+        private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            switch (e.Key)
+            {
+                case Key.Enter:
+                    AddButtonClick(sender, e);
+                    break;
+                case Key.Escape:
+                    Close();
+                    break;
+            }
         }
 
         private void AddButtonClick(object sender, RoutedEventArgs e)
