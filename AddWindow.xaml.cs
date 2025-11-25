@@ -1,64 +1,140 @@
-﻿using System;
+﻿using ExamScheduleApp.Utilities;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace ExamScheduleApp
 {
     /// <summary>
     /// Логика взаимодействия для AddWindow.xaml
     /// </summary>
+
+    public enum DataType
+    {
+        NULL,
+        SUBJECT,
+        GROUP,
+        TEACHER
+    }
+
     public partial class AddWindow : Window
     {
-        public static string data;
-        public AddWindow(string text)
+        private DataType _dataType = DataType.NULL;
+
+        public event Action<DataType> DataAdded;
+
+        public AddWindow(DataType dataType)
         {
             InitializeComponent();
-            AddTextBlock.Text = $"Введите {text}";
+
+            _dataType = dataType;
+
+            switch (_dataType)
+            {
+                case DataType.SUBJECT:
+                    AddTextBlock.Text = $"Введите Предмет";
+                    break;
+                case DataType.GROUP:
+                    AddTextBlock.Text = $"Введите Группу";
+                    break;
+                case DataType.TEACHER:
+                    AddTextBlock.Text = $"Введите Преподавателя";
+                    break;
+                default:
+                    AddTextBlock.Text = $"Введите NULL";
+                    break;
+            }
+
         }
 
         private void AddButtonClick(object sender, RoutedEventArgs e)
         {
-            if(AddTextBox.Text != "")
+            if (_dataType.Equals(DataType.NULL))
             {
-                if (AddTextBlock.Text.Equals("Введите группу"))
-                {
-                    if (!Regex.IsMatch(AddTextBox.Text.Trim(), @"^[А-ЯЁ]{2}-\d{2}$"))
+                MessageBox.Show("Нет файла подходящему к данному типу данных", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(AddTextBox.Text))
+            {
+                MessageBox.Show("Заполните поле!");
+                return;
+            }
+
+            string filePath = string.Empty;
+            string data = AddTextBox.Text;
+
+            switch (_dataType)
+            {
+
+                case DataType.SUBJECT:
+
+                    filePath = FileHelper.GetFilePathFromData("disciplines.txt");
+
+                    break;
+                case DataType.GROUP:
+
+                    if (!Regex.IsMatch(data.ToUpper().Trim(), @"^[А-ЯЁ]{2}-\d{2}$"))
                     {
                         MessageBox.Show("Введите корректное название группы! Пример: ДВ-45");
+                        return;
                     }
-                    else
-                    {
-                        AddData(AddTextBox.Text);
-                    }
+
+                    data = data.ToUpper();
+                    filePath = FileHelper.GetFilePathFromData("groups.txt");
+
+                    break;
+                case DataType.TEACHER:
+
+                    data = data.ToUpper();
+                    filePath = FileHelper.GetFilePathFromData("teachers.txt");
+
+                    break;
+            }
+
+            try
+            {
+                List<string> lines = new List<string>();
+
+                // Чтение существующих строк, если файл существует
+                if (File.Exists(filePath))
+                {
+                    lines = File.ReadAllLines(filePath).ToList();
+                }
+
+                string trimmedData = data.Trim();
+
+                if (!lines.Contains(trimmedData))
+                {
+                    lines.Add(trimmedData);
+                    lines.Sort();
+
+                    File.WriteAllLines(filePath, new HashSet<string>(lines));
+
+                    // Вызываем событие для обновления главной формы
+                    DataAdded?.Invoke(_dataType);
+
+                    // Очищаем поле для следующего ввода
+                    AddTextBox.Clear();
+
+                    MessageBox.Show("Данные успешно добавлены!", "Успех",
+                                  MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 else
                 {
-                    AddData(AddTextBox.Text);
+                    MessageBox.Show("Такие данные уже существуют!", "Информация",
+                                  MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
-            else
+            catch (Exception ex)
             {
-                MessageBox.Show("Заполните поле!");
+                MessageBox.Show($"Ошибка при работе с файлом: {ex.Message}", "Ошибка",
+                              MessageBoxButton.OK, MessageBoxImage.Error);
+                throw;
             }
-
-        }
-
-        private void AddData(string text)
-        {
-            data = AddTextBox.Text;
-            MessageBox.Show("Данные обновлены!");
-            this.Close(); ;
         }
     }
 }
