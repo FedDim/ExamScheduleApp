@@ -1,0 +1,99 @@
+﻿<Window x:Class="ExamScheduleApp.View.ScheduleTableWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ExamScheduleApp.View"
+        mc:Ignorable="d"
+        Title="Таблица Расписания Экзаменов" Height="600" Width="1200"
+        WindowStartupLocation="CenterOwner">
+    <Grid>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="10" HorizontalAlignment="Center">
+
+            <TextBlock Text="Сортировать по : " VerticalAlignment="Center" Margin="0 0 10 0"/>
+
+            <ComboBox x:Name="SortColumnComboBox" Style="{StaticResource ModernComboBoxStyle}" Width="150" Margin="0 0 10 0"
+                      SelectionChanged="SortColumnComboBox_SelectionChanged">
+
+                <ComboBoxItem Content="Преподаватель 1" Tag="FirstTeacher"/>
+                <ComboBoxItem Content="Преподаватель 2" Tag="SecondTeacher"/>
+                <ComboBoxItem Content="Дата" Tag="ExamDate"/>
+                <ComboBoxItem Content="Дисциплина" Tag="Subject"/>
+                <ComboBoxItem Content="Группа" Tag="Group"/>
+                <ComboBoxItem Content="Время" Tag="ExamTime"/>
+                <ComboBoxItem Content="Аудитория" Tag="Classroom"/>
+                <ComboBoxItem Content="Тип" Tag="ExamType"/>
+
+            </ComboBox>
+
+            <StackPanel Orientation="Horizontal">
+
+                <Button x:Name="AscendingButton" Content="По возрастанию (А-Я)"
+                        IsEnabled="False"
+                        Click="AscendingButton_Click" Style="{StaticResource ModernButtonStyle}"
+                        Margin="0 0 5 0"/>
+                <Button x:Name="DescendingButton" Content="По убыванию (Я-А)"
+                        Click="DescendingButton_Click" Style="{StaticResource ModernButtonStyle}"
+                        Margin="5 0 0 0"/>
+
+            </StackPanel>
+
+        </StackPanel>
+
+        <DataGrid x:Name="ExamsDataGrid"
+                      Grid.Row="1"
+                      AutoGenerateColumns="False"
+                      Margin="10">
+
+            <DataGrid.ColumnHeaderStyle>
+                <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="Background" Value="#2C3E50"/>
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
+                    <Setter Property="FontSize" Value="14"/>
+                    <Setter Property="Height" Value="35"/>
+                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                    <Setter Property="BorderThickness" Value="0 0 1 2"/>
+                    <Setter Property="BorderBrush" Value="#34495E"/>
+                </Style>
+            </DataGrid.ColumnHeaderStyle>
+
+            <DataGrid.Columns>
+
+                <DataGridTextColumn x:Name="FirstTeacherColumn" 
+                                    Header="Преподаватель 1"
+                                    Binding="{Binding FirstTeacher}" Width="175"/>
+                <DataGridTextColumn x:Name="SecondTeacherColumn" 
+                                    Header="Преподаватель 2" 
+                                    Binding="{Binding SecondTeacher}" Width="175"/>
+                <DataGridTextColumn x:Name="DateColumn"
+                                    Header="Дата" 
+                                    Binding="{Binding ExamDate}" Width="*"/>
+                <DataGridTextColumn x:Name="SubjectColumn"
+                                    Header="Дисциплина" 
+                                    Binding="{Binding Subject}" Width="125"/>
+                <DataGridTextColumn x:Name="GroupColumn"
+                                    Header="Группа" 
+                                    Binding="{Binding Group}" Width="*"/>
+                <DataGridTextColumn x:Name="TimeColumn" 
+                                    Header="Время" 
+                                    Binding="{Binding ExamTime}" Width="*"/>
+                <DataGridTextColumn x:Name="ClassroomColumn" 
+                                    Header="Аудитория" 
+                                    Binding="{Binding Classroom}" Width="125"/>
+                <DataGridTextColumn x:Name="ExamTypeColumn" 
+                                    Header="Тип" 
+                                    Binding="{Binding ExamType}" Width="*"/>
+                
+            </DataGrid.Columns>
+
+        </DataGrid>
+
+    </Grid>
+</Window>

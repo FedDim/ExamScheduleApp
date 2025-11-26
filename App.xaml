@@ -12,6 +12,11 @@
             <Setter Property="FontSize" Value="18"/>
         </Style>
 
+        <Style TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
+            <Setter Property="FontSize" Value="18"/>
+        </Style>
+
         <Style x:Key="ModernButtonStyle" TargetType="Button">
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="Background" Value="#2196F3"/>
@@ -34,6 +39,11 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="border" Property="Background" Value="#1976D2"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Background" Value="#90CAF9"/>
+                                <Setter Property="Foreground" Value="#E3F2FD"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>

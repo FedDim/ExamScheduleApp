@@ -14,7 +14,6 @@
         <StackPanel VerticalAlignment="Center"
                     HorizontalAlignment="Center">
             <TextBlock Name="AddTextBlock" Text="Введите"
-                       FontSize="18"
                        HorizontalAlignment="Center"/>
             <TextBox x:Name="AddTextBox"
                      Width="200"

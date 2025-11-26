@@ -1,5 +1,6 @@
 ﻿using ExamScheduleApp.Model;
 using ExamScheduleApp.Utilities;
+using ExamScheduleApp.View;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
@@ -86,9 +87,11 @@ namespace ExamScheduleApp
             }
         }
 
-        private void UpdateStatus(string message)
+        private void ShowScheduleTable_Click(object sender, RoutedEventArgs e)
         {
-            tbStatus.Text = $"{DateTime.Now:HH:mm:ss}: {message}";
+            var scheduleTableWindow = new ScheduleTableWindow(_exams);
+            scheduleTableWindow.Owner = this;
+            scheduleTableWindow.ShowDialog();
         }
 
         private void AddExam(object sender, RoutedEventArgs e)
@@ -114,8 +117,6 @@ namespace ExamScheduleApp
             ExamSchedule exam = new ExamSchedule(surname, secondSurname, dateString, subject, group, time, cabinet, type);
 
             _exams.Add(exam);
-
-            ExamsDataGrid.ItemsSource = _exams;
 
         }
 
@@ -226,8 +227,8 @@ namespace ExamScheduleApp
 
         private void CreateExamTable(Word.Document doc)
         {
-            int rowCount = ExamsDataGrid.Items.Count;
-            int columnCount = ExamsDataGrid.Columns.Count;
+            int rowCount = _exams.Count;
+            int columnCount = 8; // Преподаватель 1, Преподаватель 2, Дата, Дисциплина, Группа, Время, Аудитория, Тип
 
             // Добавляем строку для заголовков
             Word.Table wordTable = doc.Tables.Add(
@@ -240,27 +241,43 @@ namespace ExamScheduleApp
 
             wordTable.Range.Font.Name = "Times New Roman";
             wordTable.Range.Font.Size = 12;
-            wordTable.Range.Font.Bold = 0; // 0 - не жирный, 1 - жирный
-            wordTable.Range.Font.Italic = 0; // 0 - не курсив, 1 - курсив
+            wordTable.Range.Font.Bold = 0;
+            wordTable.Range.Font.Italic = 0;
             wordTable.Range.Font.Color = Word.WdColor.wdColorBlack;
 
             wordTable.Borders.Enable = 0;
             wordTable.Borders.InsideLineStyle = Word.WdLineStyle.wdLineStyleNone;
             wordTable.Borders.OutsideLineStyle = Word.WdLineStyle.wdLineStyleNone;
 
-            // Заполняем данные
+            // Заполняем заголовки
+            string[] headers = { "Преподаватель 1", "Преподаватель 2", "Дата", "Дисциплина", "Группа", "Время", "Аудитория", "Тип" };
+            for (int col = 0; col < columnCount; col++)
+            {
+                wordTable.Cell(1, col + 1).Range.Text = headers[col];
+                // Делаем заголовки жирными
+                wordTable.Cell(1, col + 1).Range.Font.Bold = 1;
+            }
+
+            // Заполняем данные из коллекции _exams
             for (int row = 0; row < rowCount; row++)
             {
-                var item = ExamsDataGrid.Items[row];
-                for (int col = 0; col < columnCount; col++)
-                {
-                    var cellValue = GetCellValue(item, ExamsDataGrid.Columns[col]);
-                    wordTable.Cell(row + 2, col + 1).Range.Text = cellValue?.ToString() ?? "";
-                }
+                var exam = _exams[row];
+
+                wordTable.Cell(row + 2, 1).Range.Text = exam.FirstTeacher ?? "";
+                wordTable.Cell(row + 2, 2).Range.Text = exam.SecondTeacher ?? "";
+                wordTable.Cell(row + 2, 3).Range.Text = exam.ExamDate ?? "";
+                wordTable.Cell(row + 2, 4).Range.Text = exam.Subject ?? "";
+                wordTable.Cell(row + 2, 5).Range.Text = exam.Group ?? "";
+                wordTable.Cell(row + 2, 6).Range.Text = exam.ExamTime ?? "";
+                wordTable.Cell(row + 2, 7).Range.Text = exam.Classroom ?? "";
+                wordTable.Cell(row + 2, 8).Range.Text = exam.ExamType ?? "";
             }
 
             // Форматирование таблицы
             wordTable.Range.Font.Size = 10;
+
+            // Добавляем отступ после таблицы
+            doc.Range(doc.Content.End - 1).InsertParagraphAfter();
         }
 
         private object GetCellValue(object item, DataGridColumn dataGridColumn)
@@ -334,5 +351,6 @@ namespace ExamScheduleApp
             }
         }
         #endregion
+
     }
 }

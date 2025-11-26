@@ -34,24 +34,23 @@
 
         <GroupBox Grid.Row="0" Grid.Column="2" Header="Создание расписания" Margin="0,0,0,10">
             <StackPanel Margin="5">
-                <TextBlock Text="Дата экзамена:" Margin="0,5"
-                           FontSize="14"/>
+                <TextBlock Text="Дата экзамена:" Margin="0,5"/>
                 <DatePicker x:Name="dpExamDate" Margin="0,5"/>
 
-                <TextBlock Text="Преподаватель:" Margin="0,5" FontSize="14"/>
+                <TextBlock Text="Преподаватель:" Margin="0,5"/>
                 <ComboBox x:Name="cbTeachers" Style ="{StaticResource ModernComboBoxStyle}" Margin="0,5"/>
 
-                <TextBlock Text="Преподаватель 2:" Margin="0,5" FontSize="14"/>
+                <TextBlock Text="Преподаватель 2:" Margin="0,5"/>
                 <ComboBox x:Name="SecondTeacherCB" Style ="{StaticResource ModernComboBoxStyle}" Margin="0,5"/>
 
 
-                <TextBlock Text="Дисциплина:" Margin="0,5" FontSize="14"/>
+                <TextBlock Text="Дисциплина:" Margin="0,5"/>
                 <ComboBox x:Name="cbSubjects" Style ="{StaticResource ModernComboBoxStyle}" Margin="0,5"/>
 
-                <TextBlock Text="Группа:" Margin="0,5" FontSize="14"/>
+                <TextBlock Text="Группа:" Margin="0,5"/>
                 <ComboBox x:Name="GroupComboBox" Style ="{StaticResource ModernComboBoxStyle}" Margin="0,5"/>
 
-                <TextBlock Text="Время:" Margin="0,5" FontSize="14"/>
+                <TextBlock Text="Время:" Margin="0,5"/>
                 <ComboBox x:Name="TimeComboBox" Style="{StaticResource ModernComboBoxStyle}" Margin="0,5">
 
                     <ComboBoxItem Content="9:00"/>
@@ -62,12 +61,12 @@
 
                 </ComboBox>
 
-                <TextBlock Text="Аудитория:" Margin="0,5" FontSize="14"/>
+                <TextBlock Text="Аудитория:" Margin="0,5"/>
                 <TextBox x:Name="txtClassroom" Margin="0,5"
                          Height="30"
                          VerticalContentAlignment="Center"/>
 
-                <TextBlock Text="Тип:" Margin="0,5" FontSize="14"/>
+                <TextBlock Text="Тип:" Margin="0,5"/>
                 <ComboBox x:Name="TypeComboBox" Style ="{StaticResource ModernComboBoxStyle}"  
                           Margin="0,5">
                     <ComboBoxItem Content="Экзамен"/>
@@ -75,43 +74,13 @@
                 </ComboBox>
 
                 <Button  Style="{StaticResource ModernButtonStyle}" Content="Добавить экзамен/консультацию" Click="AddExam" 
-         Margin="0,10"/>
+         Margin="0, 5"/>
+                <Button Style="{StaticResource ModernButtonStyle}" Content="Показать таблицу расписания"
+                        Click="ShowScheduleTable_Click" Margin="0, 5"/>
                 <Button  Style="{StaticResource ModernButtonStyle}" Content="Создать файл расписания" Click="GenerateWord_Click" 
-                         Background="Red"  Margin="0,10"/>
+                         Background="Red"  Margin="0, 5"/>
             </StackPanel>
         </GroupBox>
-
-        <DataGrid x:Name="ExamsDataGrid" 
-                  AutoGenerateColumns="False" 
-                  Margin="5"
-                  Grid.Row="1"
-                  Grid.ColumnSpan="3">
-            <DataGrid.ColumnHeaderStyle>
-                <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Background" Value="#2C3E50"/>
-                    <Setter Property="Foreground" Value="White"/>
-                    <Setter Property="FontWeight" Value="Bold"/>
-                    <Setter Property="FontSize" Value="14"/>
-                    <Setter Property="Height" Value="35"/>
-                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                    <Setter Property="BorderThickness" Value="0,0,1,2"/>
-                    <Setter Property="BorderBrush" Value="#34495E"/>
-                </Style>
-            </DataGrid.ColumnHeaderStyle>
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Фамилия" Binding="{Binding Surname}" Width="*"/>
-                <DataGridTextColumn Header="Фамилия 2" Binding="{Binding SecondSurname}" Width="*"/>
-                <DataGridTextColumn Header="Дата" Binding="{Binding ExamDate}" Width="*"/>
-                <DataGridTextColumn Header="Дисциплина" Binding="{Binding Subject}" Width="*"/>
-                <DataGridTextColumn Header="Группа" Binding="{Binding Group}" Width="*"/>
-                <DataGridTextColumn Header="Время" Binding="{Binding ExamTime}" Width="*"/>
-                <DataGridTextColumn Header="Аудитория" Binding="{Binding Classroom}" Width="*"/>
-                <DataGridTextColumn Header="Тип" Binding="{Binding ExamType}" Width="*"/>
-            </DataGrid.Columns>
-        </DataGrid>
-
-        <TextBlock x:Name="tbStatus" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" 
-                   Margin="0,10" Foreground="Blue"/>
 
     </Grid>
 </Window>
