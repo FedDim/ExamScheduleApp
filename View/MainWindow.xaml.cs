@@ -1,10 +1,10 @@
 ﻿using ExamScheduleApp.Model;
+using ExamScheduleApp.Utilities;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Windows;
@@ -18,6 +18,7 @@ namespace ExamScheduleApp
     /// </summary>
     public partial class MainWindow : Window
     {
+
         private List<Teacher> _teachers;
         private List<Subject> _subjects;
         private string _dataFolder = "Data";
@@ -28,10 +29,10 @@ namespace ExamScheduleApp
         public MainWindow()
         {
             InitializeComponent();
-            LoadItemsFromFile(GetFilePathFromData("teachers.txt"), cbTeachers);
-            LoadItemsFromFile(GetFilePathFromData("teachers.txt"), SecondTeacherCB);
-            LoadItemsFromFile(GetFilePathFromData("disciplines.txt"), cbSubjects);
-            LoadItemsFromFile(GetFilePathFromData("groups.txt"), GroupComboBox);
+            LoadItemsFromFile(FileHelper.GetFilePathFromData("teachers.txt"), cbTeachers);
+            LoadItemsFromFile(FileHelper.GetFilePathFromData("teachers.txt"), SecondTeacherCB);
+            LoadItemsFromFile(FileHelper.GetFilePathFromData("disciplines.txt"), cbSubjects);
+            LoadItemsFromFile(FileHelper.GetFilePathFromData("groups.txt"), GroupComboBox);
         }
 
         private void InitializeData()
@@ -82,95 +83,6 @@ namespace ExamScheduleApp
             catch (Exception ex)
             {
                 MessageBox.Show($"Ошибка при чтении файла: {ex.Message}");
-            }
-        }
-
-        // Добавление преподавателя
-        private void AddTeacher_Click(object sender, RoutedEventArgs e)
-        {
-            Window addWindow = new AddWindow("фамилию преподавателя");
-
-            bool? result = addWindow.ShowDialog();
-
-            string filePath = GetFilePathFromData("teachers.txt");
-            string newLine = AddWindow.data.ToUpper();
-            try
-            {
-                List<string> lines = new List<string>();
-
-                // Чтение существующих строк, если файл существует
-                if (File.Exists(filePath))
-                {
-                    lines = File.ReadAllLines(filePath).ToList();
-                }
-
-                // Добавление новой строки
-                if (!string.IsNullOrWhiteSpace(newLine))
-                {
-                    lines.Add(newLine.Trim());
-                }
-
-                // Сортировка строк в алфавитном порядке
-                lines.Sort();
-
-                //Удаление дубликатов
-                var uniqueLines = new HashSet<string>(lines);
-
-                // Запись отсортированных строк обратно в файл
-                File.WriteAllLines(filePath, uniqueLines);
-                LoadItemsFromFile(filePath, cbTeachers);
-                LoadItemsFromFile(filePath, SecondTeacherCB);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка при работе с файлом: {ex.Message}", "Ошибка",
-                                MessageBoxButton.OK, MessageBoxImage.Error);
-                throw;
-            }
-
-        }
-
-        // Добавление дисциплины
-        private void AddSubject_Click(object sender, RoutedEventArgs e)
-        {
-            Window addWindow = new AddWindow("дисциплину");
-
-            bool? result = addWindow.ShowDialog();
-
-
-            string filePath = GetFilePathFromData("disciplines.txt");
-            string newLine = AddWindow.data;
-            try
-            {
-                List<string> lines = new List<string>();
-
-                // Чтение существующих строк, если файл существует
-                if (File.Exists(filePath))
-                {
-                    lines = File.ReadAllLines(filePath).ToList();
-                }
-
-                // Добавление новой строки
-                if (!string.IsNullOrWhiteSpace(newLine))
-                {
-                    lines.Add(newLine.Trim());
-                }
-
-                // Сортировка строк в алфавитном порядке
-                lines.Sort();
-
-                //Удаление дубликатов
-                var uniqueLines = new HashSet<string>(lines);
-
-                // Запись отсортированных строк обратно в файл
-                File.WriteAllLines(filePath, uniqueLines);
-                LoadItemsFromFile(filePath, cbSubjects);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка при работе с файлом: {ex.Message}", "Ошибка",
-                              MessageBoxButton.OK, MessageBoxImage.Error);
-                throw;
             }
         }
 
@@ -395,82 +307,32 @@ namespace ExamScheduleApp
             return result == true ? saveFileDialog.FileName : null;
         }
 
-        private void AddGroup_Click(object sender, RoutedEventArgs e)
+        #region Добавление Данных в Файлы Data
+        private void AddTeacher_Click(object sender, RoutedEventArgs e) => ShowAddWindow(DataType.TEACHER);
+        private void AddSubject_Click(object sender, RoutedEventArgs e) => ShowAddWindow(DataType.SUBJECT);
+        private void AddGroup_Click(object sender, RoutedEventArgs e) => ShowAddWindow(DataType.GROUP);
+        private void ShowAddWindow(DataType dataType)
         {
-            Window addWindow = new AddWindow("группу");
-
-            bool? result = addWindow.ShowDialog();
-
-
-            string filePath = GetFilePathFromData("groups.txt");
-            string newLine = AddWindow.data;
-            try
+            AddWindow addWindow = new AddWindow(dataType);
+            addWindow.DataAdded += (type) => RefreshData(type);
+            addWindow.ShowDialog();
+        }
+        private void RefreshData(DataType dataType)
+        {
+            switch (dataType)
             {
-                List<string> lines = new List<string>();
-
-                // Чтение существующих строк, если файл существует
-                if (File.Exists(filePath))
-                {
-                    lines = File.ReadAllLines(filePath).ToList();
-                }
-
-                // Добавление новой строки
-                if (!string.IsNullOrWhiteSpace(newLine))
-                {
-                    lines.Add(newLine.Trim());
-                }
-
-                // Сортировка строк в алфавитном порядке
-                lines.Sort();
-
-                //Удаление дубликатов
-                var uniqueLines = new HashSet<string>(lines);
-
-                // Запись отсортированных строк обратно в файл
-                File.WriteAllLines(filePath, uniqueLines);
-                LoadItemsFromFile(filePath, GroupComboBox);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка при работе с файлом: {ex.Message}", "Ошибка",
-                              MessageBoxButton.OK, MessageBoxImage.Error);
-                throw;
+                case DataType.TEACHER:
+                    LoadItemsFromFile(FileHelper.GetFilePathFromData("teachers.txt"), cbTeachers);
+                    LoadItemsFromFile(FileHelper.GetFilePathFromData("teachers.txt"), SecondTeacherCB);
+                    break;
+                case DataType.SUBJECT:
+                    LoadItemsFromFile(FileHelper.GetFilePathFromData("disciplines.txt"), cbSubjects);
+                    break;
+                case DataType.GROUP:
+                    LoadItemsFromFile(FileHelper.GetFilePathFromData("groups.txt"), GroupComboBox);
+                    break;
             }
         }
-
-        private string GetFilePathFromData(string file)
-        {
-            string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", file);
-            if (File.Exists(filePath)) return filePath;
-            else
-            {
-                filePath = string.Empty;
-                try
-                {
-                    string sourceFilePath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "data", file));
-                    string targerDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
-
-                    if (!Directory.Exists(targerDirectory)) Directory.CreateDirectory(targerDirectory);
-
-                    filePath = Path.Combine(targerDirectory, file);
-
-                    if (File.Exists(sourceFilePath))
-                    {
-                        File.Copy(sourceFilePath, filePath);
-                    }
-                    else
-                    {
-                        File.Create(filePath).Close();
-                    }
-
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Ошибка : {ex.Message}");
-                }
-
-                return filePath;
-            }
-        }
+        #endregion
     }
 }
