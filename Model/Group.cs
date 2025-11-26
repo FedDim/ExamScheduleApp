@@ -6,9 +6,11 @@ using System.Threading.Tasks;
 
 namespace ExamScheduleApp.Model
 {
-    public class Subject
+    public class Group
     {
+        public int Id { get; set; }
         public string Name { get; set; }
-        public string Code { get; set; }
+
+        public Group() { }
     }
 }

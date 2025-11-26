@@ -36,8 +36,10 @@ namespace ExamScheduleApp.View
 
             Subject = new Subject
             {
-                Name = txtName.Text,
-                Code = txtCode.Text
+                FullName = txtName.Text,
+                ShortName12 = "",
+                ShortName9 = "",
+                ShortName5 = txtCode.Text // Используем поле Code как ShortName5
             };
 
             DialogResult = true;

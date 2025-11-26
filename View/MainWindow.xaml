@@ -102,6 +102,10 @@
                 <Button Style="{StaticResource ModernButtonStyle}" Content="Добавить преподавателя" Click="AddTeacher_Click" Margin="0,5"/>
                 <Button Style="{StaticResource ModernButtonStyle}" Content="Добавить дисциплину" Click="AddSubject_Click" Margin="0,5"/>
                 <Button Style="{StaticResource ModernButtonStyle}" Content="Добавить группу" Click="AddGroup_Click" Margin="0,5"/>
+                <Button Style="{StaticResource ModernButtonStyle}" Content="Редактировать преподавателей" Click="EditTeachers_Click" Margin="0,30,0,5"/>
+                <Button Style="{StaticResource ModernButtonStyle}" Content="Редактировать дисциплины" Click="EditSubjects_Click" Margin="0,5"/>
+                <Button Style="{StaticResource ModernButtonStyle}" Content="Редактировать группы" Click="EditGroups_Click" Margin="0,5"/>
+                <Button Style="{StaticResource ModernButtonStyle}" Content="Удалить выбранный экзамен" Click="DeleteExam_Click" Margin="0,30,0,5" Background="Red"/>
             </StackPanel>
         </GroupBox>
 

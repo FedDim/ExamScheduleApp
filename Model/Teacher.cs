@@ -8,7 +8,11 @@ namespace ExamScheduleApp.Model
 {
     public class Teacher
     {
-        public string FullName { get; set; }
-        public string Position { get; set; }
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string Classroom { get; set; }
+        public int AcademicBuilding { get; set; }
+
+        public Teacher() { }
     }
 }

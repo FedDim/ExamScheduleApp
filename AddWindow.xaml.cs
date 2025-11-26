@@ -1,4 +1,5 @@
-﻿using ExamScheduleApp.Utilities;
+﻿using ExamScheduleApp.Model;
+using ExamScheduleApp.Utilities;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -6,6 +7,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Input;
+using Group = ExamScheduleApp.Model.Group;
 
 namespace ExamScheduleApp
 {
@@ -69,7 +71,8 @@ namespace ExamScheduleApp
         {
             if (_dataType.Equals(DataType.NULL))
             {
-                MessageBox.Show("Нет файла подходящему к данному типу данных", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Нет файла подходящему к данному типу данных", "Ошибка",
+                              MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
@@ -79,76 +82,80 @@ namespace ExamScheduleApp
                 return;
             }
 
-            string filePath = string.Empty;
             string data = AddTextBox.Text;
-
-            switch (_dataType)
-            {
-
-                case DataType.SUBJECT:
-
-                    filePath = FileHelper.GetFilePathFromData("disciplines.txt");
-
-                    break;
-                case DataType.GROUP:
-
-                    if (!Regex.IsMatch(data.ToUpper().Trim(), @"^[А-ЯЁ]{2}-\d{2}$"))
-                    {
-                        MessageBox.Show("Введите корректное название группы! Пример: ДВ-45");
-                        return;
-                    }
-
-                    data = data.ToUpper();
-                    filePath = FileHelper.GetFilePathFromData("groups.txt");
-
-                    break;
-                case DataType.TEACHER:
-
-                    data = data.ToUpper();
-                    filePath = FileHelper.GetFilePathFromData("teachers.txt");
-
-                    break;
-            }
+            SimpleDatabaseHelper dbHelper = new SimpleDatabaseHelper();
 
             try
             {
-                List<string> lines = new List<string>();
-
-                // Чтение существующих строк, если файл существует
-                if (File.Exists(filePath))
+                switch (_dataType)
                 {
-                    lines = File.ReadAllLines(filePath).ToList();
+                    case DataType.SUBJECT:
+                        if (dbHelper.SubjectExists(data))
+                        {
+                            MessageBox.Show("Такая дисциплина уже существует!", "Информация",
+                                          MessageBoxButton.OK, MessageBoxImage.Information);
+                            return;
+                        }
+
+                        Subject subject = new Subject
+                        {
+                            ShortName9 = data.Trim()
+                            // Остальные поля заполнятся автоматически в методе AddSubject
+                        };
+                        dbHelper.AddSubject(subject);
+                        break;
+
+                    case DataType.GROUP:
+                        if (!Regex.IsMatch(data.ToUpper().Trim(), @"^[А-ЯЁ]{2}-\d{2}$"))
+                        {
+                            MessageBox.Show("Введите корректное название группы! Пример: ДВ-45");
+                            return;
+                        }
+
+                        data = data.ToUpper();
+                        if (dbHelper.GroupExists(data))
+                        {
+                            MessageBox.Show("Такая группа уже существует!", "Информация",
+                                          MessageBoxButton.OK, MessageBoxImage.Information);
+                            return;
+                        }
+
+                        Group group = new Group { Name = data.Trim() };
+                        dbHelper.AddGroup(group);
+                        break;
+
+                    case DataType.TEACHER:
+                        data = data.ToUpper();
+                        if (dbHelper.TeacherExists(data))
+                        {
+                            MessageBox.Show("Такой преподаватель уже существует!", "Информация",
+                                          MessageBoxButton.OK, MessageBoxImage.Information);
+                            return;
+                        }
+
+                        Teacher teacher = new Teacher
+                        {
+                            Name = data.Trim(),
+                            Classroom = "",
+                            AcademicBuilding = 0
+                        };
+                        dbHelper.AddTeacher(teacher);
+                        break;
                 }
 
-                string trimmedData = data.Trim();
+                // Вызываем событие для обновления главной формы
+                DataAdded?.Invoke(_dataType);
 
-                if (!lines.Contains(trimmedData))
-                {
-                    lines.Add(trimmedData);
-                    lines.Sort();
+                // Очищаем поле для следующего ввода
+                AddTextBox.Clear();
 
-                    File.WriteAllLines(filePath, new HashSet<string>(lines));
-
-                    // Вызываем событие для обновления главной формы
-                    DataAdded?.Invoke(_dataType);
-
-                    // Очищаем поле для следующего ввода
-                    AddTextBox.Clear();
-
-                    MessageBox.Show("Данные успешно добавлены!", "Успех",
-                                  MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-                else
-                {
-                    MessageBox.Show("Такие данные уже существуют!", "Информация",
-                                  MessageBoxButton.OK, MessageBoxImage.Information);
-                }
+                MessageBox.Show("Данные успешно добавлены!", "Успех",
+                              MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка при работе с файлом: {ex.Message}", "Ошибка",
+                MessageBox.Show($"Ошибка при добавлении данных: {ex.Message}", "Ошибка",
                               MessageBoxButton.OK, MessageBoxImage.Error);
-                throw;
             }
         }
     }

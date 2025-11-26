@@ -35,8 +35,9 @@ namespace ExamScheduleApp
             }
             Teacher = new Teacher
             {
-                FullName = txtFullName.Text,
-                Position = txtPosition.Text
+                Name = txtFullName.Text,
+                Classroom = "", // Значение по умолчанию
+                AcademicBuilding = 0 // Значение по умолчанию
             };
 
             DialogResult = true;
