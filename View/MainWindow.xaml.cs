@@ -157,7 +157,7 @@ namespace ExamScheduleApp
         {
             try
             {
-                var bufferFiles = Directory.GetFiles(_bufferFile, "буфер_*.txt")
+                var bufferFiles = Directory.GetFiles(_bufferFolder, "буфер_*.txt")
                     .Select(file => new FileInfo(file))
                     .OrderByDescending(file => file.CreationTime)
                     .ToList();
@@ -195,7 +195,7 @@ namespace ExamScheduleApp
 
         private void CreateBackupBuffer()
         {
-            if (File.Exists(_bufferFile))
+            if (File.Exists(_bufferFolder))
             {
                 try
                 {
@@ -209,8 +209,8 @@ namespace ExamScheduleApp
                         counter++;
                     }
 
-                    File.Copy(_bufferFile, newFileName);
-                    File.Delete(_bufferFile);
+                    File.Copy(_bufferFolder, newFileName);
+                    File.Delete(_bufferFolder);
                     MessageBox.Show($"Буфер сохранен как: {Path.GetFileName(newFileName)}");
                 }
                 catch (Exception ex)
