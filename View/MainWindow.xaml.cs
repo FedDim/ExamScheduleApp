@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Windows;
@@ -24,17 +25,201 @@ namespace ExamScheduleApp
         private List<Subject> _subjects;
         private string _dataFolder = "Data";
         private ObservableCollection<ExamSchedule> _exams = new ObservableCollection<ExamSchedule>();
+        private string _bufferFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Buffer");
+        private string _bufferFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Buffer/буфер.txt");
 
         public string ReceivedData { get; set; }
 
         public MainWindow()
         {
             InitializeComponent();
+            InitializeBuffer();
+
             LoadItemsFromFile(FileHelper.GetFilePathFromData("teachers.txt"), cbTeachers);
             LoadItemsFromFile(FileHelper.GetFilePathFromData("teachers.txt"), SecondTeacherCB);
             LoadItemsFromFile(FileHelper.GetFilePathFromData("disciplines.txt"), cbSubjects);
             LoadItemsFromFile(FileHelper.GetFilePathFromData("groups.txt"), GroupComboBox);
         }
+
+        #region Буфер
+        private void InitializeBuffer()
+        {
+
+            if (!Directory.Exists(_bufferFolder))
+            {
+                Directory.CreateDirectory(_bufferFolder);
+            }
+
+            if (File.Exists(_bufferFile))
+            {
+                var result = MessageBox.Show("Обнаружен файл буфера. Хотите загрузить данные из буфера?", "Загрузка Буфера",
+                    MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                if (result == MessageBoxResult.Yes) LoadFromBuffer();
+                else
+                {
+                    RenameCurrentBuffer();
+                    _exams.Clear();
+                }
+
+                CleanOldBufferFiles();
+            }
+        }
+
+        private void LoadFromBuffer()
+        {
+            if (!File.Exists(_bufferFile))
+            {
+                MessageBox.Show("Файл буфера не найден");
+                return;
+            }
+
+            try
+            {
+                string[] lines = File.ReadAllLines(_bufferFile, Encoding.UTF8);
+                int errorCount = 0;
+                bool showErrorLine = true;
+
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    string line = lines[i];
+                    string[] parts = line.Split('|');
+
+                    if (parts.Length == 8)
+                    {
+                        for (int j = 0; j < parts.Length; j++)
+                        {
+                            parts[j] = parts[j].Trim();
+                        }
+
+                        ExamSchedule exam = new ExamSchedule
+                        (
+                            parts[0], parts[1], parts[2], parts[3],
+                            parts[4], parts[5], parts[6], parts[7]
+                        );
+                        _exams.Add(exam);
+                    }
+                    else
+                    {
+                        errorCount++;
+
+                        if (showErrorLine)
+                        {
+                            MessageBox.Show($"Строка {i + 1} имеет неверный формат и будет пропущена :\n{line}", "Ошибка Формата",
+                                MessageBoxButton.OK, MessageBoxImage.Warning);
+
+                            if (errorCount == 1 || errorCount % 10 == 0)
+                            {
+                                var result = MessageBox.Show("Продолжать уведомлять о каждой неверной строке?", "Система оповещения",
+                                    MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                                if (result == MessageBoxResult.No) showErrorLine = false;
+                            }
+                        }
+                    }
+                }
+
+                if (errorCount > 0) MessageBox.Show($"Загрузка завершена. Пропущено {errorCount} строк с ошибками.");
+                else MessageBox.Show("Данные успешно загружены из буфера.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при загрузке буфера: {ex.Message}");
+            }
+        }
+
+        private void RenameCurrentBuffer()
+        {
+            if (File.Exists(_bufferFile))
+            {
+                try
+                {
+                    string dateString = DateTime.Now.ToString("dd.MM.yyyy_HH-mm-ss");
+                    string newFileName = Path.Combine(_bufferFolder, $"/буфер_{dateString}.txt");
+
+                    int counter = 1;
+                    while (File.Exists(newFileName))
+                    {
+                        newFileName = Path.Combine(_bufferFolder, $"/буфер_{dateString}_{counter}.txt");
+                        counter++;
+                    }
+
+                    File.Move(_bufferFile, newFileName);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка при переименовании буфера: {ex.Message}");
+                }
+            }
+        }
+
+        private void CleanOldBufferFiles()
+        {
+            try
+            {
+                var bufferFiles = Directory.GetFiles(_bufferFile, "буфер_*.txt")
+                    .Select(file => new FileInfo(file))
+                    .OrderByDescending(file => file.CreationTime)
+                    .ToList();
+
+                for (int i = 5; i < bufferFiles.Count; i++)
+                {
+                    bufferFiles[i].Delete();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при очистке старых буферов: {ex.Message}");
+            }
+        }
+
+        private void SaveToBuffer()
+        {
+            try
+            {
+                using (StreamWriter writer = new StreamWriter(_bufferFile, false, Encoding.UTF8))
+                {
+                    foreach (var exam in _exams)
+                    {
+                        string line = $"{exam.FirstTeacher} | {exam.SecondTeacher} | {exam.ExamDate} | {exam.Subject} | " +
+                            $"{exam.Group} | {exam.ExamTime} | {exam.Classroom} | {exam.ExamType}";
+                        writer.WriteLine(line);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при сохранении буфера: {ex.Message}");
+            }
+        }
+
+        private void CreateBackupBuffer()
+        {
+            if (File.Exists(_bufferFile))
+            {
+                try
+                {
+                    string dateString = DateTime.Now.ToString("dd.MM.yyyy_HH-mm-ss");
+                    string newFileName = Path.Combine(_bufferFolder, $"/буфер_{dateString}.txt");
+
+                    int counter = 1;
+                    while (File.Exists(newFileName))
+                    {
+                        newFileName = Path.Combine(_bufferFolder, $"/буфер_{dateString}_{counter}.txt");
+                        counter++;
+                    }
+
+                    File.Copy(_bufferFile, newFileName);
+                    File.Delete(_bufferFile);
+                    MessageBox.Show($"Буфер сохранен как: {Path.GetFileName(newFileName)}");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка при создании резервной копии буфера: {ex.Message}");
+                }
+            }
+        }
+        #endregion
 
         private void InitializeData()
         {
@@ -47,8 +232,6 @@ namespace ExamScheduleApp
                 Directory.CreateDirectory(_dataFolder);
             }
         }
-
-
 
         private void LoadItemsFromFile(string filePath, ComboBox comboBox)
         {
@@ -117,6 +300,8 @@ namespace ExamScheduleApp
             ExamSchedule exam = new ExamSchedule(surname, secondSurname, dateString, subject, group, time, cabinet, type);
 
             _exams.Add(exam);
+
+            SaveToBuffer();
 
         }
 
@@ -352,5 +537,55 @@ namespace ExamScheduleApp
         }
         #endregion
 
+        private void LoadFromBufferButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_exams.Count > 0)
+            {
+                var result = MessageBox.Show("Текущие данные будут потеряны. Продолжить?",
+                    "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (result == MessageBoxResult.No)
+                    return;
+            }
+
+            if (_exams.Count > 0 && File.Exists(_bufferFile))
+            {
+                CreateBackupBuffer();
+            }
+
+            _exams.Clear();
+            LoadFromBuffer();
+        }
+
+        private void ClearBufferButton_Click(object sender, RoutedEventArgs e)
+        {
+            var result = MessageBox.Show("Вы уверены, что хотите очистить буфер? Текущие данные будут сохранены в архив.",
+    "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                if (File.Exists(_bufferFile) && _exams.Count > 0)
+                {
+                    CreateBackupBuffer();
+                }
+                _exams.Clear();
+                MessageBox.Show("Буфер очищен и сохранен в архив.");
+            }
+        }
+
+        private void NewTableButton_Click(object sender, RoutedEventArgs e)
+        {
+            var result = MessageBox.Show("Начать новую таблицу? Текущие данные будут сохранены в архив.",
+    "Новая таблица", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                if (File.Exists(_bufferFile) && _exams.Count > 0)
+                {
+                    CreateBackupBuffer();
+                }
+                _exams.Clear();
+                MessageBox.Show("Начата новая таблица.");
+            }
+        }
     }
 }

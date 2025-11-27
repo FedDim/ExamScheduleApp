@@ -13,8 +13,8 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
@@ -24,7 +24,7 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <GroupBox Grid.Row="0" Grid.Column="0" Header="Управление данными" Margin="0,0,0,10">
+        <GroupBox Grid.Row="0" Grid.Column="0" Header="Управление данными" Margin="5">
             <StackPanel Margin="5">
                 <Button Style="{StaticResource ModernButtonStyle}" Content="Добавить преподавателя" Click="AddTeacher_Click" Margin="0,5"/>
                 <Button Style="{StaticResource ModernButtonStyle}" Content="Добавить дисциплину" Click="AddSubject_Click" Margin="0,5"/>
@@ -32,8 +32,19 @@
             </StackPanel>
         </GroupBox>
 
-        <GroupBox Grid.Row="0" Grid.Column="2" Header="Создание расписания" Margin="0,0,0,10">
-            <StackPanel Margin="5">
+        <GroupBox Grid.Row="1" Grid.Column="0" Header="Управление Буфером" Margin="5">
+            <StackPanel Orientation="Horizontal" Margin="5">
+                <Button x:Name="LoadFromBufferButton" Style="{StaticResource ModernButtonStyle}" 
+                        Content="Загрузить из буфера" Click="LoadFromBufferButton_Click" Margin="5"/>
+                <Button x:Name="ClearBufferButton" Style="{StaticResource ModernButtonStyle}" 
+                        Content="Очистить буфер" Click="ClearBufferButton_Click" Margin="5" Background="Red"/>
+                <Button x:Name="NewTableButton" Style="{StaticResource ModernButtonStyle}" 
+                        Content="Новая таблица" Click="NewTableButton_Click" Margin="5" Background="Red"/>
+            </StackPanel>
+        </GroupBox>
+
+        <GroupBox Grid.Row="0" Grid.Column="2" Header="Создание расписания" Margin="5" Grid.RowSpan="3">
+            <StackPanel Margin="5" >
                 <TextBlock Text="Дата экзамена:" Margin="0,5"/>
                 <DatePicker x:Name="dpExamDate" Margin="0,5"/>
 
