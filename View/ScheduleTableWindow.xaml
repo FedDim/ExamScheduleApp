@@ -12,6 +12,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="10" HorizontalAlignment="Center">
@@ -90,10 +91,13 @@
                 <DataGridTextColumn x:Name="ExamTypeColumn" 
                                     Header="Тип" 
                                     Binding="{Binding ExamType}" Width="*"/>
-                
+
             </DataGrid.Columns>
 
         </DataGrid>
+
+        <Button Grid.Row="2" x:Name="GenerateWordButton" Style="{StaticResource ModernButtonStyle}" HorizontalAlignment="Right"
+                Content="Создать файл расписания" Click="GenerateWordButton_Click" Background="Red"  Margin="0 5 10 10"/>
 
     </Grid>
 </Window>

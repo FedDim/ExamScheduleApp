@@ -1,4 +1,5 @@
 ﻿using ExamScheduleApp.Model;
+using ExamScheduleApp.Utilities;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -18,6 +19,7 @@ namespace ExamScheduleApp.View
         private ListSortDirection _currentSortDirection = ListSortDirection.Ascending;
         private Dictionary<string, DataGridColumn> _columnMapping;
         private List<DataGridColumn> _originalColumnOrder;
+        private ObservableCollection<ExamSchedule> _exams;
 
         public ScheduleTableWindow(ObservableCollection<ExamSchedule> exams)
         {
@@ -25,7 +27,8 @@ namespace ExamScheduleApp.View
             InitializeColumnMapping();
 
             _originalColumnOrder = new List<DataGridColumn>(ExamsDataGrid.Columns);
-            InitializeDataGrid(exams);
+            _exams = exams;
+            InitializeDataGrid(_exams);
 
             SortColumnComboBox.SelectedIndex = 0;
         }
@@ -106,5 +109,10 @@ namespace ExamScheduleApp.View
             }
         }
 
+        private void GenerateWordButton_Click(object sender, RoutedEventArgs e)
+        {
+            WordHelper wordHelper = new WordHelper(_exams);
+            wordHelper.CreateDocument();
+        }
     }
 }

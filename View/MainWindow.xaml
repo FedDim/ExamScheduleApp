@@ -88,8 +88,6 @@
          Margin="0, 5"/>
                 <Button Style="{StaticResource ModernButtonStyle}" Content="Показать таблицу расписания"
                         Click="ShowScheduleTable_Click" Margin="0, 5"/>
-                <Button  Style="{StaticResource ModernButtonStyle}" Content="Создать файл расписания" Click="GenerateWord_Click" 
-                         Background="Red"  Margin="0, 5"/>
             </StackPanel>
         </GroupBox>
 
