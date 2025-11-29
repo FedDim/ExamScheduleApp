@@ -38,6 +38,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.Office.Interop.Word, Version=15.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c, processorArchitecture=MSIL">
+      <HintPath>packages\Microsoft.Office.Interop.Word.15.0.4797.1004\lib\net20\Microsoft.Office.Interop.Word.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="BouncyCastle.Cryptography, Version=2.0.0.0, Culture=neutral, PublicKeyToken=072edcf4a5328938, processorArchitecture=MSIL">
       <HintPath>packages\BouncyCastle.Cryptography.2.6.2\lib\net461\BouncyCastle.Cryptography.dll</HintPath>
     </Reference>
@@ -103,7 +107,7 @@
       <DependentUpon>AddWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Model\Group.cs" />
-    <Compile Include="Model\SimpleDatabaseHelper.cs" />
+    <Compile Include="Utilities\SimpleDatabaseHelper.cs" />
     <Compile Include="Utilities\FileHelper.cs" />
     <Compile Include="View\EditGroupsWindow.xaml.cs">
       <DependentUpon>EditGroupsWindow.xaml</DependentUpon>

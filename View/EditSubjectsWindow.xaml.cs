@@ -1,7 +1,8 @@
-﻿using System;
+﻿using ExamScheduleApp.Model;
+using ExamScheduleApp.Utilities;
+using System;
 using System.Collections.ObjectModel;
 using System.Windows;
-using ExamScheduleApp.Model;
 
 namespace ExamScheduleApp
 {
