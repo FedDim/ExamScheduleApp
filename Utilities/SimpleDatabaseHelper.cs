@@ -199,7 +199,7 @@ namespace ExamScheduleApp.Utilities
                 {
                     connection.Open();
 
-                    string query = "SELECT Id, Teacher1Id, Teacher2Id, SubjectId, GroupId, Classroom FROM Exams";
+                    string query = "SELECT Id, Teacher1Id, Teacher2Id, SubjectId, GroupId, Classroom, Department FROM Exams";
 
                     using (var command = new SQLiteCommand(query, connection))
                     {
@@ -215,6 +215,7 @@ namespace ExamScheduleApp.Utilities
                                     SubjectId = SafeGetInt32(reader, "SubjectId"),
                                     GroupId = SafeGetInt32(reader, "GroupId"),
                                     Classroom = SafeGetString(reader, "Classroom"),
+                                    DeparmentName = SafeGetString(reader, "Department"),
                                     ExamDate = "",
                                     ExamTime = "",
                                     ExamType = ""
@@ -402,8 +403,8 @@ namespace ExamScheduleApp.Utilities
                 {
                     connection.Open();
                     string query = @"
-                    INSERT INTO Exams (Teacher1Id, Teacher2Id, SubjectId, GroupId, Classroom) 
-                    VALUES (@Teacher1Id, @Teacher2Id, @SubjectId, @GroupId, @Classroom)";
+                    INSERT INTO Exams (Teacher1Id, Teacher2Id, SubjectId, GroupId, Classroom, Department) 
+                    VALUES (@Teacher1Id, @Teacher2Id, @SubjectId, @GroupId, @Classroom, @Department)";
 
                     using (var command = new SQLiteCommand(query, connection))
                     {
@@ -412,6 +413,7 @@ namespace ExamScheduleApp.Utilities
                         command.Parameters.AddWithValue("@SubjectId", exam.SubjectId);
                         command.Parameters.AddWithValue("@GroupId", exam.GroupId);
                         command.Parameters.AddWithValue("@Classroom", exam.Classroom);
+                        command.Parameters.AddWithValue("@Department", exam.DeparmentName);
 
                         command.ExecuteNonQuery();
                     }

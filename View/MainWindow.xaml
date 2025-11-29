@@ -80,8 +80,8 @@
 
                 <Button  Style="{StaticResource ModernButtonStyle}" Content="Добавить экзамен/консультацию" Click="AddExam" 
          Margin="0, 5"/>
-                <!--<Button Style="{StaticResource ModernButtonStyle}" Content="Показать таблицу расписания"
-                        Click="ShowScheduleTable_Click" Margin="0, 5"/>-->
+                <Button Style="{StaticResource ModernButtonStyle}" Content="Показать таблицу расписания"
+                        Click="ShowScheduleTable_Click" Margin="0, 5"/>
             </StackPanel>
         </GroupBox>
 

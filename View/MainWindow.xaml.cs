@@ -31,7 +31,7 @@ namespace ExamScheduleApp
                 dbhelper.CleanProblematicData();
 
                 // Очищаем все экзамены при запуске
-                dbhelper.ClearAllExams();
+                //dbhelper.ClearAllExams();
 
                 // Загрузка данных
                 LoadDataFromDatabase();
@@ -93,13 +93,16 @@ namespace ExamScheduleApp
                 GroupComboBox.ItemsSource = _groups;
 
                 // DataGrid с экзаменами
-                //var examList = dbhelper.GetExamSchedule();
-                //_exams.Clear();
-                //foreach (var exam in examList)
-                //{
-                //    _exams.Add(exam);
-                //}
+                var examList = dbhelper.GetExamSchedule();
+                _exams.Clear();
+                foreach (var exam in examList)
+                {
+                    _exams.Add(exam);
+                }
                 //ExamsDataGrid.Items.Refresh();
+
+                // Убрать после наладки
+                MessageBox.Show($"Загружено: {_teachers.Count} преподавателей, {_subjects.Count} дисциплин, {_groups.Count} групп, {_exams.Count} экзаменов");
             }
             catch (Exception ex)
             {
@@ -295,6 +298,13 @@ namespace ExamScheduleApp
             var window = new EditWindow(DataType.GROUP);
             window.Closed += (s, args) => LoadDataFromDatabase(); // Обновляем данные после закрытия окна
             window.ShowDialog();
+        }
+
+        private void ShowScheduleTable_Click(object sender, RoutedEventArgs e)
+        {
+            var scheduleTableWindow = new ScheduleTableWindow(_exams);
+            scheduleTableWindow.Owner = this;
+            scheduleTableWindow.ShowDialog();
         }
     }
 }

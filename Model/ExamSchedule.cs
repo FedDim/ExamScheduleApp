@@ -11,6 +11,8 @@
         public string SubjectName { get; set; }
         public int GroupId { get; set; }
         public string GroupName { get; set; }
+        public string DeparmentName { get; set; }
+
         public string Classroom { get; set; }
 
         // Эти поля не хранятся в БД, а вводятся вручную
@@ -21,13 +23,14 @@
         public ExamSchedule() { }
 
         // Конструктор для обратной совместимости
-        public ExamSchedule(string surname, string secondSurname, string examDate, string subject, string group, string time, string classroom, string type)
+        public ExamSchedule(string surname, string secondSurname, string examDate, string subject, string group, string department, string time, string classroom, string type)
         {
             Teacher1Name = surname;
             Teacher2Name = secondSurname;
             ExamDate = examDate;
             SubjectName = subject;
             GroupName = group;
+            DeparmentName = department;
             ExamTime = time;
             Classroom = classroom;
             ExamType = type;
