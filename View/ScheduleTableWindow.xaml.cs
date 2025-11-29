@@ -1,8 +1,11 @@
 ﻿using ExamScheduleApp.Model;
 using ExamScheduleApp.Utilities;
+using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -111,8 +114,31 @@ namespace ExamScheduleApp.View
 
         private void GenerateWordButton_Click(object sender, RoutedEventArgs e)
         {
-            WordHelper wordHelper = new WordHelper(_exams);
-            wordHelper.CreateDocument();
+            try
+            {
+                var saveFileDialog = new SaveFileDialog
+                {
+                    FileName = "Выберите папку сохранения",
+                    Filter = "Все файлы | *.*",
+                    CheckFileExists = false,
+                    CheckPathExists = true
+                };
+
+                if (saveFileDialog.ShowDialog() == true)
+                {
+                    string selectedPath = Path.GetDirectoryName(saveFileDialog.FileName);
+
+                    if (!string.IsNullOrEmpty(selectedPath))
+                    {
+                        WordHelper wordHelper = new WordHelper(_exams);
+                        wordHelper.CreateAllDocuments(selectedPath);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка : {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
     }
 }

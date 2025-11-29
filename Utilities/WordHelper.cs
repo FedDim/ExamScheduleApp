@@ -22,12 +22,51 @@ namespace ExamScheduleApp.Utilities
             _exams = exams;
         }
 
-        public void CreateDocument()
+        public void CreateAllDocuments(string baseFolderPath)
+        {
+            try
+            {
+                string dateFolderName = DateTime.Now.ToString("dd.MM.yyyy");
+                string targetFolder = Path.Combine(baseFolderPath, $"Расписания {dateFolderName}");
+
+                if (!Directory.Exists(targetFolder))
+                {
+                    Directory.CreateDirectory(targetFolder);
+                }
+
+                CreateDocumentByDate(Path.Combine(targetFolder, "Расписание промежуточной аттестации (по дате).docx"));
+                CreateDocumentByTeachers(Path.Combine(targetFolder, "Расписание промежуточной аттестации (по преподавателям).docx"));
+                CreateDocumentBySubjects(Path.Combine(targetFolder, "Расписание промежуточной аттестации (по дисциплинам).docx"));
+
+                MessageBox.Show($"Все документы успешно сохранены в папке : \n{targetFolder}", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при создании документов : {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void CreateDocumentByDate(string filePath)
+        {
+            CreateDocumentInternal("Расписание промежуточной аттестации (по дате)", CreateTableFromExams, filePath);
+        }
+
+        private void CreateDocumentByTeachers(string filePath)
+        {
+            CreateDocumentInternal("Расписание промежуточной аттестации (по преподавателям)", CreateTableFromTeachers, filePath);
+        }
+
+        private void CreateDocumentBySubjects(string filePath)
+        {
+            CreateDocumentInternal("Расписание промежуточной аттестации (по дисциплинам)", CreateTableFromSubjects, filePath);
+        }
+
+        private void CreateDocumentInternal(string title, Action tableCreationMethod, string filePath)
         {
             try
             {
                 _wordApp = new Word.Application();
-                _wordApp.Visible = true;
+                _wordApp.Visible = false;
 
                 _doc = _wordApp.Documents.Add();
 
@@ -38,26 +77,12 @@ namespace ExamScheduleApp.Utilities
                 AddPageNumbers();
 
                 CreateHeader(new List<string> { "Утверждаю: ", "директор СПб ГБПОУ \"АТТ\" ", "_________________Корабельников С.К." });
-                CreateDocumentTitle("Расписание промежуточной аттестации (по дате)");
+                CreateDocumentTitle(title);
 
-                // Создаем таблицу из реальных данных или тестовую
-                if (_exams != null && _exams.Count > 0)
-                {
-                    CreateTableFromExams();
-                }
-                else
-                {
-                    CreateSimpleTable(); // для тестовых данных
-                }
+                // Создаем таблицу
+                tableCreationMethod();
 
-                string documentsPath = GetDocumentsFolderPath();
-                string filePath = ShowSaveFileDialog(documentsPath);
-
-                if (!string.IsNullOrEmpty(filePath))
-                {
-                    _doc.SaveAs2(filePath);
-                    MessageBox.Show($"Файл успешно сохранён по пути: {filePath}");
-                }
+                _doc.SaveAs2(filePath);
             }
             catch (Exception ex)
             {
@@ -69,49 +94,289 @@ namespace ExamScheduleApp.Utilities
             }
         }
 
-        private void AddPageNumbers()
+        private TimeSpan? ParseTimeForSorting(string timeString)
+        {
+            if (string.IsNullOrEmpty(timeString))
+                return null;
+
+            try
+            {
+                // Убираем возможные пробелы и парсим время
+                string cleanTime = timeString.Trim();
+                if (TimeSpan.TryParse(cleanTime, out TimeSpan time))
+                    return time;
+
+                // Если стандартный парсинг не сработал, пробуем парсить вручную
+                string[] parts = cleanTime.Split(':');
+                if (parts.Length == 2 && int.TryParse(parts[0], out int hours) && int.TryParse(parts[1], out int minutes))
+                    return new TimeSpan(hours, minutes, 0);
+            }
+            catch (Exception)
+            {
+
+            }
+
+            return null;
+        }
+
+        private DateTime? ParseDateForSorting(string dateString)
+        {
+            if (string.IsNullOrEmpty(dateString))
+                return null;
+
+            try
+            {
+                if (DateTime.TryParse(dateString, out DateTime date))
+                    return date;
+            }
+            catch (Exception)
+            {
+
+            }
+
+            return null;
+        }
+
+        private void CreateTableFromSubjects()
         {
             try
             {
-                // Добавляем нижний колонтитул для всех разделов
-                foreach (Word.Section section in _doc.Sections)
+                // Группируем экзамены по дисциплине
+                var examsBySubject = _exams
+                    .Where(e => !string.IsNullOrEmpty(e.Subject))
+                    .GroupBy(e => e.Subject)
+                    .OrderBy(g => g.Key) // Сортируем по названию дисциплины
+                    .ToList();
+
+                // Подсчитываем общее количество строк
+                int totalRows = 1; // заголовок
+                foreach (var subjectGroup in examsBySubject)
                 {
-                    Word.HeaderFooter footer = section.Footers[Word.WdHeaderFooterIndex.wdHeaderFooterPrimary];
+                    totalRows++; // строка с дисциплиной
+                    totalRows += subjectGroup.Count(); // строки с экзаменами
+                }
 
-                    // Очищаем существующий контент
-                    footer.Range.Delete();
+                // Создаем таблицу
+                Word.Table table = _doc.Tables.Add(
+                    _doc.Range(_doc.Content.End - 1),
+                    totalRows,
+                    5, // колонки: Дата, Время, Группа, Преподаватель, Тип
+                    Word.WdDefaultTableBehavior.wdWord9TableBehavior,
+                    Word.WdAutoFitBehavior.wdAutoFitWindow
+                );
 
-                    // Выравниваем по правому краю
-                    footer.Range.ParagraphFormat.Alignment = Word.WdParagraphAlignment.wdAlignParagraphRight;
+                // Убираем границы таблицы
+                table.Borders.Enable = 0;
+                table.Borders.InsideLineStyle = Word.WdLineStyle.wdLineStyleNone;
+                table.Borders.OutsideLineStyle = Word.WdLineStyle.wdLineStyleNone;
 
-                    // Добавляем текст "Страница X из Y"
-                    footer.Range.Text = "Страница ";
-                    Word.Field pageField = footer.Range.Fields.Add(
-                        footer.Range,
-                        Word.WdFieldType.wdFieldPage,
-                        Text: "",
-                        PreserveFormatting: true
-                    );
-                    footer.Range.Text = " из ";
-                    Word.Field numPagesField = footer.Range.Fields.Add(
-                        footer.Range,
-                        Word.WdFieldType.wdFieldNumPages,
-                        Text: "",
-                        PreserveFormatting: true
-                    );
+                // Устанавливаем повторение заголовков на каждой странице
+                table.Rows[1].HeadingFormat = -1;
 
-                    // Форматируем шрифт
-                    footer.Range.Font.Name = "Times New Roman";
-                    footer.Range.Font.Size = 10;
+                // Заголовки таблицы
+                string[] headers = { "Дата", "Время", "Группа", "Преподаватель", "Тип" };
+                for (int i = 0; i < headers.Length; i++)
+                {
+                    Word.Cell cell = table.Cell(1, i + 1);
+                    cell.Range.Text = headers[i];
+                    FormatCell(cell, "Times New Roman", 12, true, 12, Word.WdParagraphAlignment.wdAlignParagraphLeft);
+                }
 
-                    // Обновляем поля
-                    pageField.Update();
-                    numPagesField.Update();
+                int currentRow = 2;
+
+                // Заполняем таблицу данными
+                foreach (var subjectGroup in examsBySubject)
+                {
+                    // Добавляем строку с дисциплиной
+                    Word.Cell subjectCell = table.Cell(currentRow, 1);
+                    subjectCell.Range.Text = subjectGroup.Key;
+                    table.Cell(currentRow, 1).Merge(table.Cell(currentRow, 5));
+                    FormatCell(subjectCell, "Times New Roman", 14, true, 14, Word.WdParagraphAlignment.wdAlignParagraphCenter);
+                    // Белый фон
+                    subjectCell.Shading.BackgroundPatternColor = Word.WdColor.wdColorWhite;
+                    currentRow++;
+
+                    // Сортируем экзамены в группе по дате и времени с правильной логикой
+                    var sortedExams = subjectGroup
+                        .OrderBy(e => ParseDateForSorting(e.ExamDate) ?? DateTime.MaxValue)
+                        .ThenBy(e => ParseTimeForSorting(e.ExamTime) ?? TimeSpan.MaxValue)
+                        .ToList();
+
+                    // Добавляем экзамены по дисциплине
+                    foreach (var exam in sortedExams)
+                    {
+                        AddSubjectExamDataToTable(table, currentRow, exam);
+                        currentRow++;
+                    }
+                }
+
+                // Добавляем отступ после таблицы
+                _doc.Range(_doc.Content.End - 1).InsertParagraphAfter();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при создании таблицы по дисциплинам: {ex.Message}\n\n{ex.StackTrace}");
+            }
+        }
+
+        private void AddSubjectExamDataToTable(Word.Table table, int rowNumber, ExamSchedule exam)
+        {
+            try
+            {
+                string teacherDisplay = GetLastName(exam.FirstTeacher);
+                if (!string.IsNullOrEmpty(exam.SecondTeacher))
+                {
+                    teacherDisplay = $"{GetLastName(exam.FirstTeacher)}/{GetLastName(exam.SecondTeacher)}";
+                }
+
+                string[] data = {
+                    exam.ExamDate ?? "",
+                    exam.ExamTime ?? "",
+                    exam.Group ?? "",
+                    teacherDisplay,
+                    exam.ExamType ?? ""
+                };
+
+                for (int i = 0; i < data.Length; i++)
+                {
+                    Word.Cell cell = table.Cell(rowNumber, i + 1);
+                    cell.Range.Text = data[i];
+                    FormatCell(cell, "Times New Roman", 11, false, 11, Word.WdParagraphAlignment.wdAlignParagraphLeft);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка при добавлении номеров страниц: {ex.Message}");
+                MessageBox.Show($"Ошибка при добавлении данных экзамена в строку {rowNumber}: {ex.Message}");
+            }
+        }
+
+        private void CreateTableFromTeachers()
+        {
+            try
+            {
+                // Собираем всех уникальных преподавателей
+                var allTeachers = new Dictionary<string, List<ExamSchedule>>();
+
+                foreach (var exam in _exams)
+                {
+                    // Добавляем первого преподавателя
+                    if (!string.IsNullOrEmpty(exam.FirstTeacher))
+                    {
+                        string teacherKey = GetLastName(exam.FirstTeacher);
+                        if (!allTeachers.ContainsKey(teacherKey))
+                        {
+                            allTeachers[teacherKey] = new List<ExamSchedule>();
+                        }
+                        allTeachers[teacherKey].Add(exam);
+                    }
+
+                    // Добавляем второго преподавателя, если есть
+                    if (!string.IsNullOrEmpty(exam.SecondTeacher))
+                    {
+                        string teacherKey = GetLastName(exam.SecondTeacher);
+                        if (!allTeachers.ContainsKey(teacherKey))
+                        {
+                            allTeachers[teacherKey] = new List<ExamSchedule>();
+                        }
+                        allTeachers[teacherKey].Add(exam);
+                    }
+                }
+
+                // Сортируем преподавателей по фамилии
+                var sortedTeachers = allTeachers.OrderBy(t => t.Key).ToList();
+
+                // Подсчитываем общее количество строк
+                int totalRows = 1; // заголовок
+                foreach (var teacher in sortedTeachers)
+                {
+                    totalRows++; // строка с преподавателем
+                    totalRows += teacher.Value.Count; // строки с экзаменами
+                }
+
+                // Создаем таблицу
+                Word.Table table = _doc.Tables.Add(
+                    _doc.Range(_doc.Content.End - 1),
+                    totalRows,
+                    5, // колонки: Дата, Время, Группа, Дисциплина, Тип
+                    Word.WdDefaultTableBehavior.wdWord9TableBehavior,
+                    Word.WdAutoFitBehavior.wdAutoFitWindow
+                );
+
+                // Убираем границы таблицы
+                table.Borders.Enable = 0;
+                table.Borders.InsideLineStyle = Word.WdLineStyle.wdLineStyleNone;
+                table.Borders.OutsideLineStyle = Word.WdLineStyle.wdLineStyleNone;
+
+                // Устанавливаем повторение заголовков на каждой странице
+                table.Rows[1].HeadingFormat = -1;
+
+                // Заголовки таблицы
+                string[] headers = { "Дата", "Время", "Группа", "Дисциплина", "Тип" };
+                for (int i = 0; i < headers.Length; i++)
+                {
+                    Word.Cell cell = table.Cell(1, i + 1);
+                    cell.Range.Text = headers[i];
+                    FormatCell(cell, "Times New Roman", 12, true, 12, Word.WdParagraphAlignment.wdAlignParagraphLeft);
+                }
+
+                int currentRow = 2;
+
+                // Заполняем таблицу данными
+                foreach (var teacher in sortedTeachers)
+                {
+                    // Добавляем строку с преподавателем
+                    Word.Cell teacherCell = table.Cell(currentRow, 1);
+                    teacherCell.Range.Text = teacher.Key;
+                    table.Cell(currentRow, 1).Merge(table.Cell(currentRow, 5));
+                    FormatCell(teacherCell, "Times New Roman", 14, true, 14, Word.WdParagraphAlignment.wdAlignParagraphCenter);
+                    teacherCell.Shading.BackgroundPatternColor = Word.WdColor.wdColorWhite;
+                    currentRow++;
+
+                    // Сортируем экзамены преподавателя по дате и времени с правильной логикой
+                    var sortedExams = teacher.Value
+                        .OrderBy(e => ParseDateForSorting(e.ExamDate) ?? DateTime.MaxValue)
+                        .ThenBy(e => ParseTimeForSorting(e.ExamTime) ?? TimeSpan.MaxValue)
+                        .ToList();
+
+                    // Добавляем экзамены преподавателя
+                    foreach (var exam in sortedExams)
+                    {
+                        AddTeacherExamDataToTable(table, currentRow, exam);
+                        currentRow++;
+                    }
+                }
+
+                // Добавляем отступ после таблицы
+                _doc.Range(_doc.Content.End - 1).InsertParagraphAfter();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при создании таблицы по преподавателям: {ex.Message}\n\n{ex.StackTrace}");
+            }
+        }
+
+        private void AddTeacherExamDataToTable(Word.Table table, int rowNumber, ExamSchedule exam)
+        {
+            try
+            {
+                string[] data = {
+                    exam.ExamDate ?? "",
+                    exam.ExamTime ?? "",
+                    exam.Group ?? "",
+                    exam.Subject ?? "",
+                    exam.ExamType ?? ""
+                };
+
+                for (int i = 0; i < data.Length; i++)
+                {
+                    Word.Cell cell = table.Cell(rowNumber, i + 1);
+                    cell.Range.Text = data[i];
+                    FormatCell(cell, "Times New Roman", 11, false, 11, Word.WdParagraphAlignment.wdAlignParagraphLeft);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при добавлении данных экзамена в строку {rowNumber}: {ex.Message}");
             }
         }
 
@@ -123,7 +388,7 @@ namespace ExamScheduleApp.Utilities
                 var examsByDate = _exams
                     .Where(e => !string.IsNullOrEmpty(e.ExamDate))
                     .GroupBy(e => e.ExamDate)
-                    .OrderBy(g => DateTime.Parse(g.Key)) // Сортируем по дате
+                    .OrderBy(g => ParseDateForSorting(g.Key) ?? DateTime.MaxValue) // Сортируем по дате с правильной логикой
                     .ToList();
 
                 // Подсчитываем общее количество строк
@@ -174,13 +439,12 @@ namespace ExamScheduleApp.Utilities
                     dateCell.Range.Text = dateDisplay;
                     table.Cell(currentRow, 1).Merge(table.Cell(currentRow, 5));
                     FormatCell(dateCell, "Times New Roman", 14, true, 14, Word.WdParagraphAlignment.wdAlignParagraphCenter);
-                    // Белый фон
                     dateCell.Shading.BackgroundPatternColor = Word.WdColor.wdColorWhite;
                     currentRow++;
 
-                    // Сортируем экзамены в группе по времени и добавляем их
+                    // Сортируем экзамены в группе по времени с правильной логикой
                     var sortedExams = dateGroup
-                        .OrderBy(e => e.ExamTime)
+                        .OrderBy(e => ParseTimeForSorting(e.ExamTime) ?? TimeSpan.MaxValue)
                         .ToList();
 
                     foreach (var exam in sortedExams)
@@ -215,7 +479,7 @@ namespace ExamScheduleApp.Utilities
                     exam.ExamTime ?? "",
                     exam.Group ?? "",
                     exam.Subject ?? "",
-                    teacherDisplay, // Используем форматированную строку преподавателя (только фамилии)
+                    teacherDisplay,
                     exam.ExamType ?? ""
                 };
 
@@ -242,33 +506,51 @@ namespace ExamScheduleApp.Utilities
             return nameParts.Length > 0 ? nameParts[0] : fullName;
         }
 
-        private string GetDayOfWeekFromDate(string dateString)
+        private void AddPageNumbers()
         {
             try
             {
-                if (DateTime.TryParse(dateString, out DateTime date))
+                // Добавляем нижний колонтитул для всех разделов
+                foreach (Word.Section section in _doc.Sections)
                 {
-                    // Возвращаем день недели на русском
-                    return date.ToString("dddd", new System.Globalization.CultureInfo("ru-RU"));
+                    Word.HeaderFooter footer = section.Footers[Word.WdHeaderFooterIndex.wdHeaderFooterPrimary];
+
+                    // Очищаем существующий контент
+                    footer.Range.Delete();
+
+                    // Выравниваем по правому краю
+                    footer.Range.ParagraphFormat.Alignment = Word.WdParagraphAlignment.wdAlignParagraphRight;
+
+                    footer.Range.Text = "Страница ";
+                    Word.Field pageField = footer.Range.Fields.Add(
+                        footer.Range,
+                        Word.WdFieldType.wdFieldPage,
+                        Text: "",
+                        PreserveFormatting: true
+                    );
+                    footer.Range.Text = " из ";
+                    Word.Field numPagesField = footer.Range.Fields.Add(
+                        footer.Range,
+                        Word.WdFieldType.wdFieldNumPages,
+                        Text: "",
+                        PreserveFormatting: true
+                    );
+
+                    // Форматируем шрифт
+                    footer.Range.Font.Name = "Times New Roman";
+                    footer.Range.Font.Size = 10;
+
+                    // Обновляем поля
+                    pageField.Update();
+                    numPagesField.Update();
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка при преобразовании даты: {ex.Message}");
+                MessageBox.Show($"Ошибка при добавлении номеров страниц: {ex.Message}");
             }
-
-            return "Неизвестный день";
         }
 
-        private string CapitalizeFirstLetter(string text)
-        {
-            if (string.IsNullOrEmpty(text))
-                return text;
-
-            return char.ToUpper(text[0]) + text.Substring(1).ToLower();
-        }
-
-        // Остальные методы остаются без изменений
         private void ConfigurePageSetup()
         {
             try
@@ -335,105 +617,30 @@ namespace ExamScheduleApp.Utilities
             titleParagraph.Range.InsertParagraphAfter();
         }
 
-        private void CreateSimpleTable()
+        private string GetDayOfWeekFromDate(string dateString)
         {
             try
             {
-                // Используем подход из вашего старого работающего кода
-                Word.Table table = _doc.Tables.Add(
-                    _doc.Range(_doc.Content.End - 1),
-                    7, // 1 заголовок + 2 дня + 4 строки данных
-                    5,
-                    Word.WdDefaultTableBehavior.wdWord9TableBehavior,
-                    Word.WdAutoFitBehavior.wdAutoFitWindow
-                );
-
-                // Убираем границы таблицы
-                table.Borders.Enable = 0;
-                table.Borders.InsideLineStyle = Word.WdLineStyle.wdLineStyleNone;
-                table.Borders.OutsideLineStyle = Word.WdLineStyle.wdLineStyleNone;
-
-                // Устанавливаем повторение заголовков на каждой странице
-                table.Rows[1].HeadingFormat = -1;
-
-                // Заголовки
-                string[] headers = { "Время", "Группа", "Дисциплина", "Преподаватель", "Тип" };
-                for (int i = 0; i < headers.Length; i++)
+                if (DateTime.TryParse(dateString, out DateTime date))
                 {
-                    table.Cell(1, i + 1).Range.Text = headers[i];
-                    table.Cell(1, i + 1).Range.Font.Bold = 1;
+                    // Возвращаем день недели на русском
+                    return date.ToString("dddd", new System.Globalization.CultureInfo("ru-RU"));
                 }
-
-                // Заполняем данные напрямую, как в старом коде
-                // Понедельник (объединенная строка)
-                table.Cell(2, 1).Range.Text = "Понедельник";
-                table.Cell(2, 1).Merge(table.Cell(2, 5));
-                table.Cell(2, 1).Range.Font.Bold = 1;
-                table.Cell(2, 1).Range.ParagraphFormat.Alignment = Word.WdParagraphAlignment.wdAlignParagraphCenter;
-                // Белый фон
-                table.Cell(2, 1).Shading.BackgroundPatternColor = Word.WdColor.wdColorWhite;
-
-                // Данные понедельника
-                table.Cell(3, 1).Range.Text = "9:00-10:30";
-                table.Cell(3, 2).Range.Text = "Группа 101";
-                table.Cell(3, 3).Range.Text = "Математика";
-                table.Cell(3, 4).Range.Text = "Иванов"; // Только фамилия
-                table.Cell(3, 5).Range.Text = "Лекция";
-
-                table.Cell(4, 1).Range.Text = "10:40-12:10";
-                table.Cell(4, 2).Range.Text = "Группа 102";
-                table.Cell(4, 3).Range.Text = "Физика";
-                table.Cell(4, 4).Range.Text = "Петров/Сидоров"; // Два преподавателя
-                table.Cell(4, 5).Range.Text = "Практика";
-
-                // Вторник (объединенная строка)
-                table.Cell(5, 1).Range.Text = "Вторник";
-                table.Cell(5, 1).Merge(table.Cell(5, 5));
-                table.Cell(5, 1).Range.Font.Bold = 1;
-                table.Cell(5, 1).Range.ParagraphFormat.Alignment = Word.WdParagraphAlignment.wdAlignParagraphCenter;
-                // Белый фон
-                table.Cell(5, 1).Shading.BackgroundPatternColor = Word.WdColor.wdColorWhite;
-
-                // Данные вторника
-                table.Cell(6, 1).Range.Text = "13:00-14:30";
-                table.Cell(6, 2).Range.Text = "Группа 103";
-                table.Cell(6, 3).Range.Text = "Информатика";
-                table.Cell(6, 4).Range.Text = "Кузнецов"; // Только фамилия
-                table.Cell(6, 5).Range.Text = "Лабораторная";
-
-                // Применяем базовое форматирование ко всей таблице
-                foreach (Word.Row row in table.Rows)
-                {
-                    foreach (Word.Cell cell in row.Cells)
-                    {
-                        cell.Range.Font.Name = "Times New Roman";
-                        cell.VerticalAlignment = Word.WdCellVerticalAlignment.wdCellAlignVerticalCenter;
-
-                        // Для заголовков и дней - размер 12-14, для данных - 11
-                        if (row.Index == 1) // заголовки
-                        {
-                            cell.Range.Font.Size = 12;
-                            cell.Range.Font.Bold = 1;
-                        }
-                        else if (row.Index == 2 || row.Index == 5) // дни
-                        {
-                            cell.Range.Font.Size = 14;
-                            cell.Range.Font.Bold = 1;
-                        }
-                        else // данные
-                        {
-                            cell.Range.Font.Size = 11;
-                            cell.Range.Font.Bold = 0;
-                        }
-                    }
-                }
-
-                _doc.Range(_doc.Content.End - 1).InsertParagraphAfter();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка в создании таблицы: {ex.Message}");
+                Console.WriteLine($"Ошибка при преобразовании даты: {ex.Message}");
             }
+
+            return "Неизвестный день";
+        }
+
+        private string CapitalizeFirstLetter(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return text;
+
+            return char.ToUpper(text[0]) + text.Substring(1).ToLower();
         }
 
         private void FormatCell(Word.Cell cell, string fontName, float fontSize, bool isBold, float spaceBefore, Word.WdParagraphAlignment alignment)
@@ -451,7 +658,6 @@ namespace ExamScheduleApp.Utilities
             }
             catch (Exception ex)
             {
-                // Если форматирование не удалось, хотя бы текст останется
                 Console.WriteLine($"Ошибка форматирования ячейки: {ex.Message}");
             }
         }
@@ -466,7 +672,6 @@ namespace ExamScheduleApp.Utilities
             }
             catch (COMException)
             {
-                // Если Times New Roman недоступен, используем Arial
                 font.Name = "Arial";
                 font.Size = fontSize;
                 font.Bold = bold;
