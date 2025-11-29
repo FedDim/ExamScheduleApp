@@ -85,7 +85,7 @@
                                     Binding="{Binding GroupName}" Width="*"/>
                 <DataGridTextColumn x:Name="DepartmentColumn"
                                     Header="Отделение" 
-                                    Binding="{Binding Department}" Width="*"/>
+                                    Binding="{Binding DepartmentName}" Width="*"/>
                 <DataGridTextColumn x:Name="TimeColumn" 
                                     Header="Время" 
                                     Binding="{Binding ExamTime}" Width="*"/>

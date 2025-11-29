@@ -27,6 +27,9 @@ namespace ExamScheduleApp
                 // Диагностика базы данных
                 dbhelper.CheckDatabaseStructure();
 
+                // Обновляем существующие записи
+                dbhelper.UpdateExamFields();
+
                 // Очищаем проблемные данные (для SimpleDatabaseHelper.cs)
                 dbhelper.CleanProblematicData();
 
@@ -159,13 +162,13 @@ namespace ExamScheduleApp
                     Teacher2Name = secondSurname,
                     SubjectName = subjectName,
                     GroupName = groupName,
-                    // Дата, время и тип сохраняются только в объекте, не в БД
+                    DepartmentName = group.Department,
                     ExamDate = dateString,
                     ExamTime = time,
                     ExamType = type
                 };
 
-                // Добавление в базу данных (без даты, времени и типа)
+                // Добавление в базу данных
                 dbhelper.AddExam(exam);
 
                 // Получаем ID добавленной записи

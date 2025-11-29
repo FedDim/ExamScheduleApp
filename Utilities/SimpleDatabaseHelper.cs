@@ -39,6 +39,40 @@ namespace ExamScheduleApp.Utilities
                         }
                     }
 
+                    // Проверяем наличие новых полей в таблице Exams
+                    string checkColumnsQuery = @"PRAGMA table_info(Exams)";
+                    using (var command = new SQLiteCommand(checkColumnsQuery, connection))
+                    using (var reader = command.ExecuteReader())
+                    {
+                        var columns = new List<string>();
+                        while (reader.Read())
+                        {
+                            columns.Add(reader.GetString(1)); // имя столбца
+                        }
+
+                        // Добавляем отсутствующие столбцы
+                        if (!columns.Contains("ExamDate"))
+                        {
+                            string alterQuery = "ALTER TABLE Exams ADD COLUMN ExamDate TEXT";
+                            using (var alterCommand = new SQLiteCommand(alterQuery, connection))
+                                alterCommand.ExecuteNonQuery();
+                        }
+
+                        if (!columns.Contains("ExamTime"))
+                        {
+                            string alterQuery = "ALTER TABLE Exams ADD COLUMN ExamTime TEXT";
+                            using (var alterCommand = new SQLiteCommand(alterQuery, connection))
+                                alterCommand.ExecuteNonQuery();
+                        }
+
+                        if (!columns.Contains("ExamType"))
+                        {
+                            string alterQuery = "ALTER TABLE Exams ADD COLUMN ExamType TEXT";
+                            using (var alterCommand = new SQLiteCommand(alterQuery, connection))
+                                alterCommand.ExecuteNonQuery();
+                        }
+                    }
+
                     // Проверяем структуру каждой таблицы
                     CheckTableStructure(connection, "Teachers");
                     CheckTableStructure(connection, "Groups");
@@ -199,8 +233,7 @@ namespace ExamScheduleApp.Utilities
                 {
                     connection.Open();
 
-                    string query = "SELECT Id, Teacher1Id, Teacher2Id, SubjectId, GroupId, Classroom, Department FROM Exams";
-
+                    string query = @"SELECT Id, Teacher1Id, Teacher2Id, SubjectId, GroupId, Classroom, Department, ExamDate, ExamTime, ExamType FROM Exams";
                     using (var command = new SQLiteCommand(query, connection))
                     {
                         using (var reader = command.ExecuteReader())
@@ -215,10 +248,10 @@ namespace ExamScheduleApp.Utilities
                                     SubjectId = SafeGetInt32(reader, "SubjectId"),
                                     GroupId = SafeGetInt32(reader, "GroupId"),
                                     Classroom = SafeGetString(reader, "Classroom"),
-                                    DeparmentName = SafeGetString(reader, "Department"),
-                                    ExamDate = "",
-                                    ExamTime = "",
-                                    ExamType = ""
+                                    DepartmentName = SafeGetString(reader, "Department"),
+                                    ExamDate = SafeGetString(reader, "ExamDate"),
+                                    ExamTime = SafeGetString(reader, "ExamTime"),
+                                    ExamType = SafeGetString(reader, "ExamType")
                                 };
 
                                 // Получаем названия по ID
@@ -403,9 +436,10 @@ namespace ExamScheduleApp.Utilities
                 {
                     connection.Open();
                     string query = @"
-                    INSERT INTO Exams (Teacher1Id, Teacher2Id, SubjectId, GroupId, Classroom, Department) 
-                    VALUES (@Teacher1Id, @Teacher2Id, @SubjectId, @GroupId, @Classroom, @Department)";
-
+                                    INSERT INTO Exams (Teacher1Id, Teacher2Id, SubjectId, GroupId, 
+                                                     Classroom, Department, ExamDate, ExamTime, ExamType) 
+                                    VALUES (@Teacher1Id, @Teacher2Id, @SubjectId, @GroupId, 
+                                            @Classroom, @Department, @ExamDate, @ExamTime, @ExamType)";
                     using (var command = new SQLiteCommand(query, connection))
                     {
                         command.Parameters.AddWithValue("@Teacher1Id", exam.Teacher1Id);
@@ -413,7 +447,10 @@ namespace ExamScheduleApp.Utilities
                         command.Parameters.AddWithValue("@SubjectId", exam.SubjectId);
                         command.Parameters.AddWithValue("@GroupId", exam.GroupId);
                         command.Parameters.AddWithValue("@Classroom", exam.Classroom);
-                        command.Parameters.AddWithValue("@Department", exam.DeparmentName);
+                        command.Parameters.AddWithValue("@Department", exam.DepartmentName); 
+                        command.Parameters.AddWithValue("@ExamDate", exam.ExamDate);
+                        command.Parameters.AddWithValue("@ExamTime", exam.ExamTime);
+                        command.Parameters.AddWithValue("@ExamType", exam.ExamType);
 
                         command.ExecuteNonQuery();
                     }
@@ -720,6 +757,36 @@ namespace ExamScheduleApp.Utilities
             {
                 MessageBox.Show($"Ошибка удаления группы: {ex.Message}");
                 throw;
+            }
+        }
+        public void UpdateExamFields()
+        {
+            try
+            {
+                using (var connection = new SQLiteConnection(GetConnectionString()))
+                {
+                    connection.Open();
+
+                    // Устанавливаем значения по умолчанию для существующих записей
+                    string updateQuery = @"UPDATE Exams 
+                                 SET ExamDate = COALESCE(ExamDate, ''),
+                                     ExamTime = COALESCE(ExamTime, ''),
+                                     ExamType = COALESCE(ExamType, '')
+                                 WHERE ExamDate IS NULL OR ExamTime IS NULL OR ExamType IS NULL";
+
+                    using (var command = new SQLiteCommand(updateQuery, connection))
+                    {
+                        int updatedRows = command.ExecuteNonQuery();
+                        if (updatedRows > 0)
+                        {
+                            MessageBox.Show($"Обновлено {updatedRows} записей с пустыми полями даты/времени/типа");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка обновления записей: {ex.Message}");
             }
         }
     }

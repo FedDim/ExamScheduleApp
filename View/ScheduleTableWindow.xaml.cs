@@ -38,6 +38,7 @@ namespace ExamScheduleApp.View
                 { "ExamDate", DateColumn},
                 { "SubjectName", SubjectColumn},
                 { "GroupName", GroupColumn},
+                {"DepartmentName", DepartmentColumn},   
                 { "ExamTime", TimeColumn},
                 { "Classroom", ClassroomColumn},
                 { "ExamType", ExamTypeColumn}
