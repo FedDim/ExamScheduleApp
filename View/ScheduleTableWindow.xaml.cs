@@ -11,7 +11,7 @@ namespace ExamScheduleApp.View
     public partial class ScheduleTableWindow : Window
     {
         private ListCollectionView _collectionView;
-        private string _currentSortColumn = "ExamDate";
+        private string _currentSortColumn = "Teacher1Name";
         private ListSortDirection _currentSortDirection = ListSortDirection.Ascending;
         private Dictionary<string, DataGridColumn> _columnMapping;
         private List<DataGridColumn> _originalColumnOrder;
@@ -38,7 +38,7 @@ namespace ExamScheduleApp.View
                 { "ExamDate", DateColumn},
                 { "SubjectName", SubjectColumn},
                 { "GroupName", GroupColumn},
-                {"DepartmentName", DepartmentColumn},   
+                { "DepartmentName", DepartmentColumn},
                 { "ExamTime", TimeColumn},
                 { "Classroom", ClassroomColumn},
                 { "ExamType", ExamTypeColumn}
@@ -51,12 +51,14 @@ namespace ExamScheduleApp.View
             _collectionView = new ListCollectionView(exams);
             ExamsDataGrid.ItemsSource = _collectionView;
 
-            ApplySorting("ExamDate", ListSortDirection.Ascending);
+            ApplySorting(_currentSortColumn, ListSortDirection.Ascending);
         }
 
         private void SortColumnComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            ApplySorting((SortColumnComboBox.SelectedItem as ComboBoxItem).Tag.ToString(), _currentSortDirection);
+            string selectedItem = (SortColumnComboBox.SelectedItem as ComboBoxItem).Tag.ToString();
+
+            ApplySorting(selectedItem, _currentSortDirection);
         }
 
         private void AscendingButton_Click(object sender, RoutedEventArgs e)

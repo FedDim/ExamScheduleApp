@@ -23,11 +23,12 @@
             <ComboBox x:Name="SortColumnComboBox" Style="{StaticResource ModernComboBoxStyle}" Width="150" Margin="0 0 10 0"
                       SelectionChanged="SortColumnComboBox_SelectionChanged">
 
-                <ComboBoxItem Content="Преподаватель 1" Tag="FirstTeacher"/>
-                <ComboBoxItem Content="Преподаватель 2" Tag="SecondTeacher"/>
+                <ComboBoxItem Content="Преподаватель 1" Tag="Teacher1Name"/>
+                <ComboBoxItem Content="Преподаватель 2" Tag="Teacher2Name"/>
                 <ComboBoxItem Content="Дата" Tag="ExamDate"/>
-                <ComboBoxItem Content="Дисциплина" Tag="Subject"/>
-                <ComboBoxItem Content="Группа" Tag="Group"/>
+                <ComboBoxItem Content="Дисциплина" Tag="SubjectName"/>
+                <ComboBoxItem Content="Отделение" Tag="DepartmentName"/>
+                <ComboBoxItem Content="Группа" Tag="GroupName"/>
                 <ComboBoxItem Content="Время" Tag="ExamTime"/>
                 <ComboBoxItem Content="Аудитория" Tag="Classroom"/>
                 <ComboBoxItem Content="Тип" Tag="ExamType"/>
