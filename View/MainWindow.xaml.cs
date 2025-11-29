@@ -1,5 +1,6 @@
 ﻿using ExamScheduleApp.Model;
 using ExamScheduleApp.Utilities;
+using ExamScheduleApp.View;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -277,21 +278,21 @@ namespace ExamScheduleApp
 
         private void EditTeachers_Click(object sender, RoutedEventArgs e)
         {
-            var window = new EditTeachersWindow();
+            var window = new EditWindow(DataType.TEACHER);
             window.Closed += (s, args) => LoadDataFromDatabase(); // Обновляем данные после закрытия окна
             window.ShowDialog();
         }
 
         private void EditSubjects_Click(object sender, RoutedEventArgs e)
         {
-            var window = new EditSubjectsWindow();
+            var window = new EditWindow(DataType.SUBJECT);
             window.Closed += (s, args) => LoadDataFromDatabase(); // Обновляем данные после закрытия окна
             window.ShowDialog();
         }
 
         private void EditGroups_Click(object sender, RoutedEventArgs e)
         {
-            var window = new EditGroupsWindow();
+            var window = new EditWindow(DataType.GROUP);
             window.Closed += (s, args) => LoadDataFromDatabase(); // Обновляем данные после закрытия окна
             window.ShowDialog();
         }

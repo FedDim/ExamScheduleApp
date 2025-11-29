@@ -108,28 +108,11 @@
     </Compile>
     <Compile Include="Model\Group.cs" />
     <Compile Include="Utilities\SimpleDatabaseHelper.cs" />
-    <Compile Include="View\EditGroupsWindow.xaml.cs">
-      <DependentUpon>EditGroupsWindow.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="View\EditSubjectsWindow.xaml.cs">
-      <DependentUpon>EditSubjectsWindow.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="View\EditTeachersWindow.xaml.cs">
-      <DependentUpon>EditTeachersWindow.xaml</DependentUpon>
-    </Compile>
     <Page Include="View\AddWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="View\EditGroupsWindow.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="View\EditSubjectsWindow.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="View\EditTeachersWindow.xaml">
+    <Page Include="View\EditWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -140,6 +123,9 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="View\EditWindow.xaml.cs">
+      <DependentUpon>EditWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="View\MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>

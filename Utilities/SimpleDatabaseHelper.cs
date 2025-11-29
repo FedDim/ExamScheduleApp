@@ -162,7 +162,7 @@ namespace ExamScheduleApp.Utilities
                 using (var connection = new SQLiteConnection(GetConnectionString()))
                 {
                     connection.Open();
-                    string query = "SELECT id, name FROM Groups ORDER BY name";
+                    string query = "SELECT id, name, department FROM Groups ORDER BY name";
 
                     using (var command = new SQLiteCommand(query, connection))
                     {
@@ -173,7 +173,8 @@ namespace ExamScheduleApp.Utilities
                                 groups.Add(new Group
                                 {
                                     Id = SafeGetInt32(reader, "id"),
-                                    Name = SafeGetString(reader, "name")
+                                    Name = SafeGetString(reader, "name"),
+                                    Department = SafeGetString(reader, "department")
                                 });
                             }
                         }
