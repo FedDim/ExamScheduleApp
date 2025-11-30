@@ -144,9 +144,22 @@ namespace ExamScheduleApp.View
             // Создаем кнопку через FrameworkElementFactory
             FrameworkElementFactory buttonFactory = new FrameworkElementFactory(typeof(Button));
             buttonFactory.SetValue(Button.ContentProperty, "Удалить");
-            buttonFactory.SetValue(Button.BackgroundProperty, Brushes.Red);
-            buttonFactory.SetValue(Button.ForegroundProperty, Brushes.White);
+
+            // Применяем стиль вместо прямого задания цветов
+            Style redButtonStyle = Application.Current.FindResource("RedModernButtonStyle") as Style;
+            if (redButtonStyle != null)
+            {
+                buttonFactory.SetValue(Button.StyleProperty, redButtonStyle);
+            }
+            else
+            {
+                // Fallback на прямые цвета если стиль не найден
+                buttonFactory.SetValue(Button.BackgroundProperty, Brushes.Red);
+                buttonFactory.SetValue(Button.ForegroundProperty, Brushes.White);
+            }
+
             buttonFactory.SetValue(Button.MarginProperty, new Thickness(2));
+            buttonFactory.SetValue(Button.PaddingProperty, new Thickness(8, 4, 8, 4)); // Сохраняем похожий размер
             buttonFactory.AddHandler(Button.ClickEvent, eventHandler);
 
             template.VisualTree = buttonFactory;
