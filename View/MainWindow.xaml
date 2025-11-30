@@ -43,20 +43,20 @@
                 <DatePicker x:Name="dpExamDate" Margin="0,5"/>
 
                 <TextBlock Text="Преподаватель:" Margin="0,5"/>
-                <ComboBox x:Name="cbTeachers" Style ="{StaticResource ModernComboBoxStyle}" Margin="0,5"/>
+                <ComboBox x:Name="cbTeachers" IsEditable="True" Style ="{StaticResource ModernComboBoxStyle}" Margin="0,5"/>
 
                 <TextBlock Text="Преподаватель 2:" Margin="0,5"/>
-                <ComboBox x:Name="SecondTeacherCB" Style ="{StaticResource ModernComboBoxStyle}" Margin="0,5"/>
+                <ComboBox x:Name="SecondTeacherCB" IsEditable="True" Style ="{StaticResource ModernComboBoxStyle}" Margin="0,5"/>
 
 
                 <TextBlock Text="Дисциплина:" Margin="0,5"/>
-                <ComboBox x:Name="cbSubjects" Style ="{StaticResource ModernComboBoxStyle}" Margin="0,5"/>
+                <ComboBox x:Name="cbSubjects" IsEditable="True" Style ="{StaticResource ModernComboBoxStyle}" Margin="0,5"/>
 
                 <TextBlock Text="Группа:" Margin="0,5"/>
-                <ComboBox x:Name="GroupComboBox" Style ="{StaticResource ModernComboBoxStyle}" Margin="0,5"/>
+                <ComboBox x:Name="GroupComboBox"  Style ="{StaticResource ModernComboBoxStyle}" Margin="0,5"/>
 
                 <TextBlock Text="Время:" Margin="0,5"/>
-                <ComboBox x:Name="TimeComboBox" Style="{StaticResource ModernComboBoxStyle}" Margin="0,5">
+                <ComboBox x:Name="TimeComboBox" IsEditable="False" Style="{StaticResource ModernComboBoxStyle}" Margin="0,5">
 
                     <ComboBoxItem Content="9:00"/>
                     <ComboBoxItem Content="10:40"/>
@@ -74,7 +74,7 @@
                          VerticalContentAlignment="Center"/>
 
                 <TextBlock Text="Тип:" Margin="0,5"/>
-                <ComboBox x:Name="TypeComboBox" Style ="{StaticResource ModernComboBoxStyle}"  
+                <ComboBox x:Name="TypeComboBox" IsEditable="False" Style ="{StaticResource ModernComboBoxStyle}"  
                           Margin="0,5">
                     <ComboBoxItem Content="Экзамен"/>
                     <ComboBoxItem Content="Консультация"/>
