@@ -101,6 +101,14 @@
 
         </DataGrid>
 
+        <StackPanel Grid.Row="2" Orientation="Horizontal">
+
+            <Button x:Name="DeleteExam" Style="{StaticResource RedModernButtonStyle}"
+                    Content="Удалить экзамен" Margin="10 5 0 10"
+                    IsEnabled="False"/>
+
+        </StackPanel>
+
         <!--<Button Grid.Row="2" x:Name="GenerateWordButton" Style="{StaticResource ModernButtonStyle}" HorizontalAlignment="Right"
                 Content="Создать файл расписания" Click="GenerateWordButton_Click" Background="Red"  Margin="0 5 10 10"/>-->
 

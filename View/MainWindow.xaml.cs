@@ -16,7 +16,7 @@ namespace ExamScheduleApp
         private List<Teacher> _teachers;
         private List<Subject> _subjects;
         private List<Group> _groups;
-        private ObservableCollection<ExamSchedule> _exams = new ObservableCollection<ExamSchedule>();
+        private ObservableCollection<ExamSchedule> _exams;
         public SimpleDatabaseHelper dbhelper = new SimpleDatabaseHelper();
 
         public MainWindow()
@@ -44,6 +44,7 @@ namespace ExamScheduleApp
                 MessageBox.Show($"Ошибка при запуске приложения: {ex.Message}");
             }
         }
+
         private void LoadDataFromDatabase()
         {
             try
@@ -95,17 +96,22 @@ namespace ExamScheduleApp
                 cbSubjects.ItemsSource = _subjects;
                 GroupComboBox.ItemsSource = _groups;
 
-                var resultBufferLoad = MessageBox.Show("Загузить данные с буфера? Иначе они будут очищены", "Загрузка буфера", MessageBoxButton.YesNo, MessageBoxImage.Question);
-
-                if (resultBufferLoad == MessageBoxResult.No)
+                if (_exams is null)
                 {
-                    var resultBufferClear = MessageBox.Show("Вы точно уверены, что хотите очистить буфер?", "Очистка буфера", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    var resultBufferLoad = MessageBox.Show("Загузить данные с буфера? Иначе они будут очищены", "Загрузка буфера", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
-                    if (resultBufferClear == MessageBoxResult.Yes)
+                    if (resultBufferLoad == MessageBoxResult.No)
                     {
-                        dbhelper.ClearAllExams();
-                        MessageBox.Show("Буфер очищен", "Информация");
+                        var resultBufferClear = MessageBox.Show("Вы точно уверены, что хотите очистить буфер?", "Очистка буфера", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                        if (resultBufferClear == MessageBoxResult.Yes)
+                        {
+                            dbhelper.ClearAllExams();
+                            MessageBox.Show("Буфер очищен", "Информация");
+                        }
                     }
+
+                    _exams = new ObservableCollection<ExamSchedule>();
                 }
 
                 var examList = dbhelper.GetExamSchedule();
