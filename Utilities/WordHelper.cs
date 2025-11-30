@@ -510,40 +510,34 @@ namespace ExamScheduleApp.Utilities
         {
             try
             {
-                // Добавляем нижний колонтитул для всех разделов
+                object missing = Type.Missing;
+
                 foreach (Word.Section section in _doc.Sections)
                 {
                     Word.HeaderFooter footer = section.Footers[Word.WdHeaderFooterIndex.wdHeaderFooterPrimary];
 
-                    // Очищаем существующий контент
+                    // Очищаем и настраиваем форматирование
                     footer.Range.Delete();
-
-                    // Выравниваем по правому краю
                     footer.Range.ParagraphFormat.Alignment = Word.WdParagraphAlignment.wdAlignParagraphRight;
-
-                    footer.Range.Text = "Страница ";
-                    Word.Field pageField = footer.Range.Fields.Add(
-                        footer.Range,
-                        Word.WdFieldType.wdFieldPage,
-                        Text: "",
-                        PreserveFormatting: true
-                    );
-                    footer.Range.Text = " из ";
-                    Word.Field numPagesField = footer.Range.Fields.Add(
-                        footer.Range,
-                        Word.WdFieldType.wdFieldNumPages,
-                        Text: "",
-                        PreserveFormatting: true
-                    );
-
-                    // Форматируем шрифт
                     footer.Range.Font.Name = "Times New Roman";
                     footer.Range.Font.Size = 10;
 
+                    // Используем Selection для точного позиционирования
+                    footer.Range.Select();
+                    Word.Selection selection = _wordApp.Selection;
+
+                    // Вставляем текст и поля
+                    selection.TypeText("Страница ");
+                    selection.Fields.Add(selection.Range, Word.WdFieldType.wdFieldPage);
+                    selection.TypeText(" из ");
+                    selection.Fields.Add(selection.Range, Word.WdFieldType.wdFieldNumPages);
+
                     // Обновляем поля
-                    pageField.Update();
-                    numPagesField.Update();
+                    selection.Fields.Update();
                 }
+
+                // Снимаем выделение
+                _wordApp.Selection.Collapse();
             }
             catch (Exception ex)
             {
