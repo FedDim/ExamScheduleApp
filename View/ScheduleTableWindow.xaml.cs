@@ -126,7 +126,11 @@ namespace ExamScheduleApp.View
             {
                 var examToDelete = _selectedItem;
 
-                if (MessageBox.Show("Удалить экзамен/консультацию?", "Удаление данных", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                if (MessageBox.Show($"Вы действительно хотите удалить экзамен/консультацию?\n" +
+                $"Преподаватели: {examToDelete.Teacher1Name}, {examToDelete.Teacher2Name}\n" +
+                $"Дисциплина: {examToDelete.SubjectName}\n" +
+                $"Группа: {examToDelete.GroupName}",
+                "Удаление данных", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
                 {
                     ExamsToDelete.Add(examToDelete.Id);
 

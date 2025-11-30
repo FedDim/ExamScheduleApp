@@ -251,45 +251,6 @@ namespace ExamScheduleApp
         }
         #endregion
 
-        /*private void DeleteExam_Click(object sender, RoutedEventArgs e)
-        {
-            if (ExamsDataGrid.SelectedItem == null)
-            {
-                MessageBox.Show("Выберите экзамен для удаления!");
-                return;
-            }
-
-            var selectedExam = (ExamSchedule)ExamsDataGrid.SelectedItem;
-
-            var result = MessageBox.Show(
-                $"Вы действительно хотите удалить экзамен?\n" +
-                $"Преподаватели: {selectedExam.Teacher1Name}, {selectedExam.Teacher2Name}\n" +
-                $"Дисциплина: {selectedExam.SubjectName}\n" +
-                $"Группа: {selectedExam.GroupName}",
-                "Подтверждение удаления",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (result == MessageBoxResult.Yes)
-            {
-                try
-                {
-                    // Удаляем из базы данных
-                    dbhelper.DeleteExam(selectedExam.Id);
-
-                    // Удаляем из коллекции
-                    _exams.Remove(selectedExam);
-                    ExamsDataGrid.Items.Refresh();
-
-                    MessageBox.Show("Экзамен удален!");
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Ошибка при удалении экзамена: {ex.Message}");
-                }
-            }
-        }*/
-
         private void EditTeachers_Click(object sender, RoutedEventArgs e)
         {
             var window = new EditWindow(DataType.TEACHER);
