@@ -1,5 +1,4 @@
 ﻿using ExamScheduleApp.Model;
-using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -795,31 +794,6 @@ namespace ExamScheduleApp.Utilities
             {
                 MessageBox.Show($"Ошибка при очистке ресурсов: {ex.Message}");
             }
-        }
-
-        private string GetDocumentsFolderPath()
-        {
-            string documentsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Documents");
-            if (!Directory.Exists(documentsPath))
-            {
-                Directory.CreateDirectory(documentsPath);
-            }
-            return documentsPath;
-        }
-
-        private string ShowSaveFileDialog(string initialDirectory)
-        {
-            var saveFileDialog = new SaveFileDialog
-            {
-                InitialDirectory = initialDirectory,
-                FileName = $"Экзамены_{DateTime.Now:dd.MM.yyyy}",
-                Filter = "Word Документы (*.docx)|*.docx|Все файлы (*.*)|*.*",
-                DefaultExt = ".docx",
-                AddExtension = true,
-                Title = "Сохранить документ Word"
-            };
-
-            return saveFileDialog.ShowDialog() == true ? saveFileDialog.FileName : null;
         }
     }
 }
