@@ -51,8 +51,13 @@
 
         <DataGrid x:Name="ExamsDataGrid"
                       Grid.Row="1"
+                      SelectionMode="Single"
+                      SelectionUnit="FullRow"
+                      IsTabStop="True"
                       AutoGenerateColumns="False"
-                      Margin="10">
+                      IsReadOnly="True"
+                      Margin="10"
+                      SelectionChanged="ExamsDataGrid_SelectionChanged">
 
             <DataGrid.ColumnHeaderStyle>
                 <Style TargetType="DataGridColumnHeader">
@@ -105,7 +110,7 @@
 
             <Button x:Name="DeleteExam" Style="{StaticResource RedModernButtonStyle}"
                     Content="Удалить экзамен" Margin="10 5 0 10"
-                    IsEnabled="False"/>
+                    IsEnabled="False" Click="DeleteExam_Click"/>
 
         </StackPanel>
 

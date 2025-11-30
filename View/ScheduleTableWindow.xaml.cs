@@ -16,6 +16,9 @@ namespace ExamScheduleApp.View
         private Dictionary<string, DataGridColumn> _columnMapping;
         private List<DataGridColumn> _originalColumnOrder;
         private ObservableCollection<ExamSchedule> _exams;
+        private ExamSchedule _selectedItem;
+
+        public List<int> ExamsToDelete { get; private set; } = new List<int>();
 
         public ScheduleTableWindow(ObservableCollection<ExamSchedule> exams)
         {
@@ -52,6 +55,8 @@ namespace ExamScheduleApp.View
             ExamsDataGrid.ItemsSource = _collectionView;
 
             ApplySorting(_currentSortColumn, ListSortDirection.Ascending);
+
+            ResettingLineSelection();
         }
 
         private void SortColumnComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -106,6 +111,38 @@ namespace ExamScheduleApp.View
                 ExamsDataGrid.Columns.Remove(sortColumn);
                 ExamsDataGrid.Columns.Insert(0, sortColumn);
             }
+        }
+
+        private void ExamsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            _selectedItem = (ExamSchedule)ExamsDataGrid.SelectedItem;
+
+            if (_selectedItem != null) DeleteExam.IsEnabled = _selectedItem != null;
+        }
+
+        private void DeleteExam_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selectedItem != null)
+            {
+                var examToDelete = _selectedItem;
+
+                if (MessageBox.Show("Удалить экзамен/консультацию?", "Удаление данных", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                {
+                    ExamsToDelete.Add(examToDelete.Id);
+
+                    _exams.Remove(examToDelete);
+                    ApplySorting(_currentSortColumn, _currentSortDirection);
+
+                    ResettingLineSelection();
+                }
+            }
+        }
+
+        private void ResettingLineSelection()
+        {
+            ExamsDataGrid.SelectedItem = null;
+            _selectedItem = null;
+            DeleteExam.IsEnabled = false;
         }
 
         //private void GenerateWordButton_Click(object sender, RoutedEventArgs e)

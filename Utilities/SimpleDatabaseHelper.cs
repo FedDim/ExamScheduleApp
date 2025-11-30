@@ -428,7 +428,7 @@ namespace ExamScheduleApp.Utilities
             }
         }
 
-        public void AddExam(ExamSchedule exam)
+        public void AddExam(ExamSchedule exam, bool showInfo = false)
         {
             try
             {
@@ -447,7 +447,7 @@ namespace ExamScheduleApp.Utilities
                         command.Parameters.AddWithValue("@SubjectId", exam.SubjectId);
                         command.Parameters.AddWithValue("@GroupId", exam.GroupId);
                         command.Parameters.AddWithValue("@Classroom", exam.Classroom);
-                        command.Parameters.AddWithValue("@Department", exam.DepartmentName); 
+                        command.Parameters.AddWithValue("@Department", exam.DepartmentName);
                         command.Parameters.AddWithValue("@ExamDate", exam.ExamDate);
                         command.Parameters.AddWithValue("@ExamTime", exam.ExamTime);
                         command.Parameters.AddWithValue("@ExamType", exam.ExamType);
@@ -456,7 +456,7 @@ namespace ExamScheduleApp.Utilities
                     }
                 }
 
-                MessageBox.Show("Экзамен успешно добавлен в базу данных!");
+                if (showInfo != false) MessageBox.Show("Экзамен успешно добавлен в базу данных!");
             }
             catch (Exception ex)
             {
@@ -464,7 +464,7 @@ namespace ExamScheduleApp.Utilities
             }
         }
 
-        public void DeleteExam(int examId)
+        public void DeleteExam(int examId, bool showInfo = false)
         {
             try
             {
@@ -480,7 +480,7 @@ namespace ExamScheduleApp.Utilities
 
                         if (rowsDeleted > 0)
                         {
-                            MessageBox.Show("Экзамен успешно удален из базы данных");
+                            if (showInfo != false) MessageBox.Show("Экзамен успешно удален из базы данных");
                         }
                         else
                         {

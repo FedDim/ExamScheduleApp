@@ -98,13 +98,9 @@ namespace ExamScheduleApp
 
                 if (_exams is null)
                 {
-                    var resultBufferLoad = MessageBox.Show("Загузить данные с буфера? Иначе они будут очищены", "Загрузка буфера", MessageBoxButton.YesNo, MessageBoxImage.Question);
-
-                    if (resultBufferLoad == MessageBoxResult.No)
+                    if (MessageBox.Show("Загузить данные с буфера? Иначе они будут очищены", "Загрузка буфера", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.No)
                     {
-                        var resultBufferClear = MessageBox.Show("Вы точно уверены, что хотите очистить буфер?", "Очистка буфера", MessageBoxButton.YesNo, MessageBoxImage.Question);
-
-                        if (resultBufferClear == MessageBoxResult.Yes)
+                        if (MessageBox.Show("Вы точно уверены, что хотите очистить буфер?", "Очистка буфера", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
                         {
                             dbhelper.ClearAllExams();
                             MessageBox.Show("Буфер очищен", "Информация");
@@ -114,12 +110,7 @@ namespace ExamScheduleApp
                     _exams = new ObservableCollection<ExamSchedule>();
                 }
 
-                var examList = dbhelper.GetExamSchedule();
-                _exams.Clear();
-                foreach (var exam in examList)
-                {
-                    _exams.Add(exam);
-                }
+                RefreshExamsData();
 
                 // Убрать после наладки
                 MessageBox.Show($"Загружено: {_teachers.Count} преподавателей, {_subjects.Count} дисциплин, {_groups.Count} групп, {_exams.Count} экзаменов");
@@ -324,7 +315,55 @@ namespace ExamScheduleApp
         {
             var scheduleTableWindow = new ScheduleTableWindow(_exams);
             scheduleTableWindow.Owner = this;
+            scheduleTableWindow.Closed += ScheduleTableWindow_Closed;
             scheduleTableWindow.ShowDialog();
+        }
+
+        private void ScheduleTableWindow_Closed(object sender, EventArgs e)
+        {
+            var scheduleTableWindow = sender as ScheduleTableWindow;
+
+            if (scheduleTableWindow?.ExamsToDelete?.Count > 0)
+            {
+                try
+                {
+                    // Удаляем экзамены из базы данных
+                    DeleteExamsFromDatabase(scheduleTableWindow.ExamsToDelete);
+
+                    // Обновляем данные
+                    RefreshExamsData();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка при удалении экзаменов: {ex.Message}");
+                }
+            }
+        }
+
+        private void DeleteExamsFromDatabase(List<int> examIds)
+        {
+            foreach (var examId in examIds)
+            {
+                dbhelper.DeleteExam(examId);
+            }
+        }
+
+        private void RefreshExamsData()
+        {
+            try
+            {
+                // Обновляем коллекцию экзаменов из базы данных
+                var examList = dbhelper.GetExamSchedule();
+                _exams.Clear();
+                foreach (var exam in examList)
+                {
+                    _exams.Add(exam);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при обновлении данных: {ex.Message}");
+            }
         }
     }
 }

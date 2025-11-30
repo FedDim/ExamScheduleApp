@@ -59,8 +59,10 @@
                 <ComboBox x:Name="TimeComboBox" Style="{StaticResource ModernComboBoxStyle}" Margin="0,5">
 
                     <ComboBoxItem Content="9:00"/>
+                    <ComboBoxItem Content="10:40"/>
                     <ComboBoxItem Content="11:00"/>
                     <ComboBoxItem Content="13:00"/>
+                    <ComboBoxItem Content="14:35"/>
                     <ComboBoxItem Content="15:00"/>
                     <ComboBoxItem Content="16:20"/>
 
