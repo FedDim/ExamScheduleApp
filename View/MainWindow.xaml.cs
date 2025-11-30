@@ -95,14 +95,25 @@ namespace ExamScheduleApp
                 cbSubjects.ItemsSource = _subjects;
                 GroupComboBox.ItemsSource = _groups;
 
-                // DataGrid с экзаменами
+                var resultBufferLoad = MessageBox.Show("Загузить данные с буфера? Иначе они будут очищены", "Загрузка буфера", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                if (resultBufferLoad == MessageBoxResult.No)
+                {
+                    var resultBufferClear = MessageBox.Show("Вы точно уверены, что хотите очистить буфер?", "Очистка буфера", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                    if (resultBufferClear == MessageBoxResult.Yes)
+                    {
+                        dbhelper.ClearAllExams();
+                        MessageBox.Show("Буфер очищен", "Информация");
+                    }
+                }
+
                 var examList = dbhelper.GetExamSchedule();
                 _exams.Clear();
                 foreach (var exam in examList)
                 {
                     _exams.Add(exam);
                 }
-                //ExamsDataGrid.Items.Refresh();
 
                 // Убрать после наладки
                 MessageBox.Show($"Загружено: {_teachers.Count} преподавателей, {_subjects.Count} дисциплин, {_groups.Count} групп, {_exams.Count} экзаменов");
