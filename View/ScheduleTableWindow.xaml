@@ -20,7 +20,7 @@
 
             <TextBlock Text="Сортировать по : " VerticalAlignment="Center" Margin="0 0 10 0"/>
 
-            <ComboBox x:Name="SortColumnComboBox" Style="{StaticResource ModernComboBoxStyle}" Width="150" Margin="0 0 10 0"
+            <ComboBox x:Name="SortColumnComboBox" IsEditable="False" Style="{StaticResource ModernComboBoxStyle}" Width="150" Margin="0 0 10 0"
                       SelectionChanged="SortColumnComboBox_SelectionChanged">
 
                 <ComboBoxItem Content="Преподаватель 1" Tag="Teacher1Name"/>
@@ -118,7 +118,7 @@
                     IsEnabled="False" Click="DeleteExam_Click"/>
 
             <Button x:Name="GenerateWordButton" Grid.Column="2" Style="{StaticResource ModernButtonStyle}"
-                Content="Создать файл расписания" Click="GenerateWordButton_Click" Background="Red"  Margin="0 5 10 10"/>
+                Content="Создать файл расписания" Click="GenerateWordButton_Click" Margin="0 5 10 10"/>
         </Grid>
 
     </Grid>

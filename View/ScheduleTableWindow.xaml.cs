@@ -1,13 +1,16 @@
 ﻿using ExamScheduleApp.Model;
+using ExamScheduleApp.Utilities;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 
 namespace ExamScheduleApp.View
 {
@@ -152,32 +155,62 @@ namespace ExamScheduleApp.View
             DeleteExam.IsEnabled = false;
         }
 
-        private void GenerateWordButton_Click(object sender, RoutedEventArgs e)
+        private async void GenerateWordButton_Click(object sender, RoutedEventArgs e)
         {
-            try
+            Button generateButton = sender as Button;
+
+            if (generateButton != null)
             {
-                var saveFileDialog = new SaveFileDialog
-                {
-                    FileName = "Выберите папку сохранения",
-                    Filter = "Все файлы | *.*",
-                    CheckFileExists = false,
-                    CheckPathExists = true
-                };
+                // Сохраняем оригинальный текст кнопки
+                string originalText = generateButton.Content.ToString();
 
-                if (saveFileDialog.ShowDialog() == true)
-                {
-                    string selectedPath = Path.GetDirectoryName(saveFileDialog.FileName);
+                // Блокируем кнопку и меняем текст
+                generateButton.IsEnabled = false;
+                generateButton.Content = "Формирование...";
 
-                    if (!string.IsNullOrEmpty(selectedPath))
+                // Можно добавить курсор ожидания
+                this.Cursor = Cursors.Wait;
+
+                try
+                {
+                    MessageBox.Show("Документы начали формироваться. Это может занять некоторое время...",
+                                  "Формирование документов",
+                                  MessageBoxButton.OK, MessageBoxImage.Information);
+
+                    var saveFileDialog = new SaveFileDialog
                     {
-                        //WordHelper wordHelper = new WordHelper(_exams);
-                        //wordHelper.CreateAllDocuments(selectedPath);
+                        FileName = "Выберите папку сохранения",
+                        Filter = "Все файлы | *.*",
+                        CheckFileExists = false,
+                        CheckPathExists = true
+                    };
+
+                    if (saveFileDialog.ShowDialog() == true)
+                    {
+                        string selectedPath = Path.GetDirectoryName(saveFileDialog.FileName);
+
+                        if (!string.IsNullOrEmpty(selectedPath))
+                        {
+                            await Task.Run(() =>
+                            {
+                                WordHelper wordHelper = new WordHelper(_exams);
+                                wordHelper.CreateAllDocuments(selectedPath);
+                            });
+                        }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка : {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка при создании документов: {ex.Message}",
+                                  "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                finally
+                {
+                    // Восстанавливаем исходное состояние
+                    generateButton.IsEnabled = true;
+                    generateButton.Content = originalText;
+                    this.Cursor = Cursors.Arrow;
+                }
             }
         }
     }
