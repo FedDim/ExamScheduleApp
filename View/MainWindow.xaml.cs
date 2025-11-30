@@ -113,7 +113,7 @@ namespace ExamScheduleApp
                 RefreshExamsData();
 
                 // Убрать после наладки
-                MessageBox.Show($"Загружено: {_teachers.Count} преподавателей, {_subjects.Count} дисциплин, {_groups.Count} групп, {_exams.Count} экзаменов");
+                //MessageBox.Show($"Загружено: {_teachers.Count} преподавателей, {_subjects.Count} дисциплин, {_groups.Count} групп, {_exams.Count} экзаменов");
             }
             catch (Exception ex)
             {
