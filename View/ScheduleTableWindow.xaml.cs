@@ -175,7 +175,7 @@ namespace ExamScheduleApp.View
                 {
                     MessageBox.Show("Документы начали формироваться. Это может занять некоторое время...",
                                   "Формирование документов",
-                                  MessageBoxButton.OK, MessageBoxImage.Information);
+                                  MessageBoxButton.OK, MessageBoxImage.Information, MessageBoxResult.OK, MessageBoxOptions.DefaultDesktopOnly);
 
                     var saveFileDialog = new SaveFileDialog
                     {

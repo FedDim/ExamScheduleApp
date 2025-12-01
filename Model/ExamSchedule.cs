@@ -4,7 +4,7 @@
     {
         public int Id { get; set; }
         public int Teacher1Id { get; set; }
-        public int Teacher2Id { get; set; }
+        public int? Teacher2Id { get; set; }
         public string Teacher1Name { get; set; }
         public string Teacher2Name { get; set; }
         public int SubjectId { get; set; }

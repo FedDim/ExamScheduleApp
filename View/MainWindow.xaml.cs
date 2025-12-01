@@ -122,12 +122,6 @@ namespace ExamScheduleApp
         }
         private void AddExam(object sender, RoutedEventArgs e)
         {
-            if (cbTeachers.SelectedItem == null || SecondTeacherCB.SelectedItem == null ||
-                cbSubjects.SelectedItem == null || GroupComboBox.SelectedItem == null)
-            {
-                MessageBox.Show("Выберите всех преподавателей, дисциплину и группу!");
-                return;
-            }
 
             // Получаем объекты
             var teacher1 = (Teacher)cbTeachers.SelectedItem;
@@ -135,8 +129,8 @@ namespace ExamScheduleApp
             var subject = (Subject)cbSubjects.SelectedItem;
             var group = (Group)GroupComboBox.SelectedItem;
 
-            string surname = teacher1.Name;
-            string secondSurname = teacher2.Name;
+            string surname = teacher1?.Name;
+            string secondSurname = teacher2?.Name;
 
             // Дата, время и тип вводятся вручную
             DateTime? date = dpExamDate.SelectedDate;
@@ -144,9 +138,9 @@ namespace ExamScheduleApp
             string time = TimeComboBox.SelectedItem != null ? TimeComboBox.SelectedItem.ToString().Replace("System.Windows.Controls.ComboBoxItem: ", "") : string.Empty;
             string type = TypeComboBox.SelectedItem != null ? TypeComboBox.SelectedItem.ToString().Replace("System.Windows.Controls.ComboBoxItem: ", "") : string.Empty;
 
-            string subjectName = subject.Name;
-            string groupName = group.Name;
-            string cabinet = txtClassroom.Text;
+            string subjectName = subject?.Name;
+            string groupName = group?.Name;
+            string cabinet = txtClassroom?.Text;
 
             string checkResult = CheckEnteredFields(surname, secondSurname, dateString, subjectName, groupName, time, cabinet, type);
 
@@ -162,7 +156,7 @@ namespace ExamScheduleApp
                 ExamSchedule exam = new ExamSchedule
                 {
                     Teacher1Id = teacher1.Id,
-                    Teacher2Id = teacher2.Id,
+                    Teacher2Id = teacher2?.Id,
                     SubjectId = subject.Id,
                     GroupId = group.Id,
                     Classroom = cabinet,
@@ -201,13 +195,14 @@ namespace ExamScheduleApp
                 MessageBox.Show($"Ошибка при добавлении экзамена: {ex.Message}");
             }
         }
+
         private string CheckEnteredFields(string surname, string secondSurname, string date,
                                 string subject, string group, string time, string cabinet, string type)
         {
             string checkResult = string.Empty;
 
             if (string.IsNullOrEmpty(surname)) checkResult += "Не выбрана Фамилия первого преподавателя\n";
-            if (string.IsNullOrEmpty(secondSurname)) checkResult += "Не выбрана Фамилия второго преподавателя\n";
+            //if (string.IsNullOrEmpty(secondSurname)) checkResult += "Не выбрана Фамилия второго преподавателя\n";
             if (string.IsNullOrEmpty(date)) checkResult += "Не выбрана дата проведения\n";
             if (string.IsNullOrEmpty(subject)) checkResult += "Не выбрана Дисциплина\n";
             if (string.IsNullOrEmpty(time)) checkResult += "Не заполнено Время\n";
@@ -254,21 +249,21 @@ namespace ExamScheduleApp
         private void EditTeachers_Click(object sender, RoutedEventArgs e)
         {
             var window = new EditWindow(DataType.TEACHER);
-            window.Closed += (s, args) => LoadDataFromDatabase(); // Обновляем данные после закрытия окна
+            window.Closed += (s, args) => RefreshData(DataType.TEACHER); // Обновляем данные после закрытия окна
             window.ShowDialog();
         }
 
         private void EditSubjects_Click(object sender, RoutedEventArgs e)
         {
             var window = new EditWindow(DataType.SUBJECT);
-            window.Closed += (s, args) => LoadDataFromDatabase(); // Обновляем данные после закрытия окна
+            window.Closed += (s, args) => RefreshData(DataType.SUBJECT); // Обновляем данные после закрытия окна
             window.ShowDialog();
         }
 
         private void EditGroups_Click(object sender, RoutedEventArgs e)
         {
             var window = new EditWindow(DataType.GROUP);
-            window.Closed += (s, args) => LoadDataFromDatabase(); // Обновляем данные после закрытия окна
+            window.Closed += (s, args) => RefreshData(DataType.GROUP); // Обновляем данные после закрытия окна
             window.ShowDialog();
         }
 

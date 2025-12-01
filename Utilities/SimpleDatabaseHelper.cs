@@ -256,7 +256,7 @@ namespace ExamScheduleApp.Utilities
 
                                 // Получаем названия по ID
                                 exam.Teacher1Name = GetTeacherName(exam.Teacher1Id);
-                                exam.Teacher2Name = GetTeacherName(exam.Teacher2Id);
+                                exam.Teacher2Name = exam.Teacher2Id == null ? null : GetTeacherName((int)exam.Teacher2Id);
                                 exam.SubjectName = GetSubjectName(exam.SubjectId);
                                 exam.GroupName = GetGroupName(exam.GroupId);
 
@@ -387,7 +387,7 @@ namespace ExamScheduleApp.Utilities
                 "DELETE FROM Teachers WHERE name IS NULL OR classroom IS NULL",
                 "DELETE FROM Groups WHERE name IS NULL",
                 "DELETE FROM Disciplines WHERE shortName9 IS NULL",
-                "DELETE FROM Exams WHERE Teacher1Id IS NULL OR Teacher2Id IS NULL OR SubjectId IS NULL OR GroupId IS NULL OR Classroom IS NULL"
+                "DELETE FROM Exams WHERE Teacher1Id IS NULL OR SubjectId IS NULL OR GroupId IS NULL OR Classroom IS NULL"
             };
 
                     foreach (string query in cleanupQueries)
