@@ -719,12 +719,13 @@ namespace ExamScheduleApp.Utilities
                 using (var connection = new SQLiteConnection(GetConnectionString()))
                 {
                     connection.Open();
-                    string query = "UPDATE Groups SET name = @Name WHERE id = @Id";
+                    string query = "UPDATE Groups SET name = @Name, department = @Department WHERE id = @Id";
 
                     using (var command = new SQLiteCommand(query, connection))
                     {
                         command.Parameters.AddWithValue("@Name", group.Name);
                         command.Parameters.AddWithValue("@Id", group.Id);
+                        command.Parameters.AddWithValue("@Department", group.Department);
 
                         command.ExecuteNonQuery();
                     }
