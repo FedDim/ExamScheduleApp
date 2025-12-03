@@ -129,11 +129,11 @@ namespace ExamScheduleApp.Utilities
                     }
                 }
 
-                // Создаем таблицу
+                // Создаем таблицу с 7 колонками (добавлена Аудитория)
                 Word.Table table = _doc.Tables.Add(
                     _doc.Range(_doc.Content.End - 1),
                     totalRows,
-                    6, // колонки: Группа, Дата, Время, Дисциплина, Преподаватель, Тип
+                    7, // колонки: Группа, Дата, Время, Дисциплина, Преподаватель, Аудитория, Тип
                     Word.WdDefaultTableBehavior.wdWord9TableBehavior,
                     Word.WdAutoFitBehavior.wdAutoFitWindow
                 );
@@ -146,8 +146,8 @@ namespace ExamScheduleApp.Utilities
                 // Устанавливаем повторение заголовков на каждой странице
                 table.Rows[1].HeadingFormat = -1;
 
-                // Заголовки таблицы
-                string[] headers = { "Группа", "Дата", "Время", "Дисциплина", "Преподаватель", "Тип" };
+                // Заголовки таблицы с добавленной колонкой Аудитория
+                string[] headers = { "Группа", "Дата", "Время", "Дисциплина", "Преподаватель", "Аудитория", "Тип" };
                 for (int i = 0; i < headers.Length; i++)
                 {
                     Word.Cell cell = table.Cell(1, i + 1);
@@ -163,7 +163,7 @@ namespace ExamScheduleApp.Utilities
                     // Добавляем строку с отделением
                     Word.Cell departmentCell = table.Cell(currentRow, 1);
                     departmentCell.Range.Text = departmentGroup.Key;
-                    table.Cell(currentRow, 1).Merge(table.Cell(currentRow, 6));
+                    table.Cell(currentRow, 1).Merge(table.Cell(currentRow, 7)); // Объединяем 7 колонок
                     FormatCell(departmentCell, "Times New Roman", 14, true, 14, Word.WdParagraphAlignment.wdAlignParagraphCenter);
 
                     // Добавляем подчеркивание
@@ -188,7 +188,7 @@ namespace ExamScheduleApp.Utilities
                         FormatCell(groupCell, "Times New Roman", 12, true, 12, Word.WdParagraphAlignment.wdAlignParagraphLeft);
 
                         // Остальные ячейки в строке группы оставляем пустыми
-                        for (int i = 2; i <= 6; i++)
+                        for (int i = 2; i <= 7; i++)
                         {
                             Word.Cell emptyCell = table.Cell(currentRow, i);
                             emptyCell.Range.Text = "";
@@ -235,12 +235,13 @@ namespace ExamScheduleApp.Utilities
                 // Первая ячейка (Группа) оставляем пустой, так как группа уже указана выше
                 table.Cell(rowNumber, 1).Range.Text = "";
 
-                // Остальные данные
+                // Остальные данные с добавленной колонкой Аудитория
                 string[] data = {
                     exam.ExamDate ?? "",
                     exam.ExamTime ?? "",
                     exam.SubjectName ?? "",
                     teacherDisplay,
+                    exam.Classroom ?? "", // Используем свойство Classroom
                     exam.ExamType ?? ""
                 };
 
@@ -257,7 +258,6 @@ namespace ExamScheduleApp.Utilities
             }
         }
 
-        // Остальные методы остаются без изменений
         private TimeSpan? ParseTimeForSorting(string timeString)
         {
             if (string.IsNullOrEmpty(timeString))
@@ -310,10 +310,11 @@ namespace ExamScheduleApp.Utilities
                     totalRows += subjectGroup.Count();
                 }
 
+                // Создаем таблицу с 6 колонками (добавлена Аудитория)
                 Word.Table table = _doc.Tables.Add(
                     _doc.Range(_doc.Content.End - 1),
                     totalRows,
-                    5,
+                    6, // колонки: Дата, Время, Группа, Преподаватель, Аудитория, Тип
                     Word.WdDefaultTableBehavior.wdWord9TableBehavior,
                     Word.WdAutoFitBehavior.wdAutoFitWindow
                 );
@@ -324,7 +325,8 @@ namespace ExamScheduleApp.Utilities
 
                 table.Rows[1].HeadingFormat = -1;
 
-                string[] headers = { "Дата", "Время", "Группа", "Преподаватель", "Тип" };
+                // Заголовки таблицы с добавленной колонкой Аудитория
+                string[] headers = { "Дата", "Время", "Группа", "Преподаватель", "Аудитория", "Тип" };
                 for (int i = 0; i < headers.Length; i++)
                 {
                     Word.Cell cell = table.Cell(1, i + 1);
@@ -338,7 +340,7 @@ namespace ExamScheduleApp.Utilities
                 {
                     Word.Cell subjectCell = table.Cell(currentRow, 1);
                     subjectCell.Range.Text = subjectGroup.Key;
-                    table.Cell(currentRow, 1).Merge(table.Cell(currentRow, 5));
+                    table.Cell(currentRow, 1).Merge(table.Cell(currentRow, 6)); // Объединяем 6 колонок
                     FormatCell(subjectCell, "Times New Roman", 14, true, 14, Word.WdParagraphAlignment.wdAlignParagraphCenter);
                     subjectCell.Shading.BackgroundPatternColor = Word.WdColor.wdColorWhite;
                     currentRow++;
@@ -373,11 +375,13 @@ namespace ExamScheduleApp.Utilities
                     teacherDisplay = $"{GetLastName(exam.Teacher1Name)}/{GetLastName(exam.Teacher2Name)}";
                 }
 
+                // Данные с добавленной колонкой Аудитория
                 string[] data = {
                     exam.ExamDate ?? "",
                     exam.ExamTime ?? "",
                     exam.GroupName ?? "",
                     teacherDisplay,
+                    exam.Classroom ?? "", // Используем свойство Classroom
                     exam.ExamType ?? ""
                 };
 
@@ -432,10 +436,11 @@ namespace ExamScheduleApp.Utilities
                     totalRows += teacher.Value.Count;
                 }
 
+                // Создаем таблицу с 6 колонками (добавлена Аудитория)
                 Word.Table table = _doc.Tables.Add(
                     _doc.Range(_doc.Content.End - 1),
                     totalRows,
-                    5,
+                    6, // колонки: Дата, Время, Группа, Дисциплина, Аудитория, Тип
                     Word.WdDefaultTableBehavior.wdWord9TableBehavior,
                     Word.WdAutoFitBehavior.wdAutoFitWindow
                 );
@@ -446,7 +451,8 @@ namespace ExamScheduleApp.Utilities
 
                 table.Rows[1].HeadingFormat = -1;
 
-                string[] headers = { "Дата", "Время", "Группа", "Дисциплина", "Тип" };
+                // Заголовки таблицы с добавленной колонкой Аудитория
+                string[] headers = { "Дата", "Время", "Группа", "Дисциплина", "Аудитория", "Тип" };
                 for (int i = 0; i < headers.Length; i++)
                 {
                     Word.Cell cell = table.Cell(1, i + 1);
@@ -460,7 +466,7 @@ namespace ExamScheduleApp.Utilities
                 {
                     Word.Cell teacherCell = table.Cell(currentRow, 1);
                     teacherCell.Range.Text = teacher.Key;
-                    table.Cell(currentRow, 1).Merge(table.Cell(currentRow, 5));
+                    table.Cell(currentRow, 1).Merge(table.Cell(currentRow, 6)); // Объединяем 6 колонок
                     FormatCell(teacherCell, "Times New Roman", 14, true, 14, Word.WdParagraphAlignment.wdAlignParagraphCenter);
                     teacherCell.Shading.BackgroundPatternColor = Word.WdColor.wdColorWhite;
                     currentRow++;
@@ -489,11 +495,13 @@ namespace ExamScheduleApp.Utilities
         {
             try
             {
+                // Данные с добавленной колонкой Аудитория
                 string[] data = {
                     exam.ExamDate ?? "",
                     exam.ExamTime ?? "",
                     exam.GroupName ?? "",
                     exam.SubjectName ?? "",
+                    exam.Classroom ?? "", // Используем свойство Classroom
                     exam.ExamType ?? ""
                 };
 
@@ -527,10 +535,11 @@ namespace ExamScheduleApp.Utilities
                     totalRows += dateGroup.Count();
                 }
 
+                // Создаем таблицу с 6 колонками (добавлена Аудитория)
                 Word.Table table = _doc.Tables.Add(
                     _doc.Range(_doc.Content.End - 1),
                     totalRows,
-                    5,
+                    6, // колонки: Время, Группа, Дисциплина, Преподаватель, Аудитория, Тип
                     Word.WdDefaultTableBehavior.wdWord9TableBehavior,
                     Word.WdAutoFitBehavior.wdAutoFitWindow
                 );
@@ -541,7 +550,8 @@ namespace ExamScheduleApp.Utilities
 
                 table.Rows[1].HeadingFormat = -1;
 
-                string[] headers = { "Время", "Группа", "Дисциплина", "Преподаватель", "Тип" };
+                // Заголовки таблицы с добавленной колонкой Аудитория
+                string[] headers = { "Время", "Группа", "Дисциплина", "Преподаватель", "Аудитория", "Тип" };
                 for (int i = 0; i < headers.Length; i++)
                 {
                     Word.Cell cell = table.Cell(1, i + 1);
@@ -558,7 +568,7 @@ namespace ExamScheduleApp.Utilities
 
                     Word.Cell dateCell = table.Cell(currentRow, 1);
                     dateCell.Range.Text = dateDisplay;
-                    table.Cell(currentRow, 1).Merge(table.Cell(currentRow, 5));
+                    table.Cell(currentRow, 1).Merge(table.Cell(currentRow, 6)); // Объединяем 6 колонок
                     FormatCell(dateCell, "Times New Roman", 14, true, 14, Word.WdParagraphAlignment.wdAlignParagraphCenter);
                     dateCell.Shading.BackgroundPatternColor = Word.WdColor.wdColorWhite;
                     currentRow++;
@@ -592,11 +602,13 @@ namespace ExamScheduleApp.Utilities
                     teacherDisplay = $"{GetLastName(exam.Teacher1Name)}/{GetLastName(exam.Teacher2Name)}";
                 }
 
+                // Данные с добавленной колонкой Аудитория
                 string[] data = {
                     exam.ExamTime ?? "",
                     exam.GroupName ?? "",
                     exam.SubjectName ?? "",
                     teacherDisplay,
+                    exam.Classroom ?? "", // Используем свойство Classroom
                     exam.ExamType ?? ""
                 };
 
