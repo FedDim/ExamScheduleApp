@@ -346,7 +346,7 @@ namespace ExamScheduleApp
                 case Key.OemTilde:
                     _tildePressed = true;
                     break;
-                case Key.Space:
+                case Key.Tab:
                     _tabPressed = true;
                     break;
             }
