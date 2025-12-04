@@ -39,6 +39,26 @@
             </StackPanel>
         </GroupBox>
 
+        <GroupBox Grid.Row="1" Grid.Column="0" Header="Управление буфером" Margin="0,10,0,10">
+            <StackPanel Margin="5">
+                <Button Style="{StaticResource ModernButtonStyle}" 
+                Content="Сохранить буфер в файл" 
+                Click="SaveBuffer_Click" 
+                Margin="0,5"
+                ToolTip="Сохранить все экзамены в текстовый файл"/>
+                <Button Style="{StaticResource ModernButtonStyle}" 
+                Content="Загрузить буфер из файла" 
+                Click="LoadBuffer_Click" 
+                Margin="0,5"
+                ToolTip="Загрузить экзамены из текстового файла (с проверкой)"/>
+                <Button Style="{StaticResource RedModernButtonStyle}" 
+                Content="Очистить буфер" 
+                Click="ClearBuffer_Click" 
+                Margin="0,5"
+                ToolTip="Удалить все экзамены из базы данных (с предложением сохранения)"/>
+            </StackPanel>
+        </GroupBox>
+
         <GroupBox Grid.Row="0" Grid.Column="2" Header="Создание расписания" Margin="5" Grid.RowSpan="3">
             <StackPanel Margin="5" >
                 <TextBlock Text="Дата экзамена:" Margin="0,5"/>
