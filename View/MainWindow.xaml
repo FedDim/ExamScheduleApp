@@ -9,7 +9,9 @@
         MinHeight="700" 
         MinWidth="900"
         WindowStartupLocation="CenterScreen"
-        WindowState="Maximized">
+        WindowState="Maximized"
+        KeyDown="Window_KeyDown"
+        KeyUp="Window_KeyUp">
     <Grid>
 
         <Grid.RowDefinitions>

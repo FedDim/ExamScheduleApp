@@ -10,7 +10,7 @@ namespace ExamScheduleApp.Utilities
 {
     public class SimpleDatabaseHelper
     {
-        private string GetConnectionString()
+        public string GetConnectionString()
         {
             string basePath = AppDomain.CurrentDomain.BaseDirectory;
             string dbPath = Path.Combine(basePath, "Data", "ExamScheduleDB.db");

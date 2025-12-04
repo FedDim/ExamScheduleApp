@@ -112,10 +112,17 @@
     </Compile>
     <Compile Include="Model\Group.cs" />
     <Compile Include="Utilities\SimpleDatabaseHelper.cs" />
+    <Compile Include="View\DevWindow.xaml.cs">
+      <DependentUpon>DevWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="View\ScheduleTableWindow.xaml.cs">
       <DependentUpon>ScheduleTableWindow.xaml</DependentUpon>
     </Compile>
     <Page Include="View\AddWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="View\DevWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

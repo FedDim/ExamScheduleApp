@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows;
+using System.Windows.Input;
 
 namespace ExamScheduleApp
 {
@@ -18,6 +19,7 @@ namespace ExamScheduleApp
         private List<Group> _groups;
         private ObservableCollection<ExamSchedule> _exams;
         public SimpleDatabaseHelper dbhelper = new SimpleDatabaseHelper();
+        private bool _ctrlPressed = false, _tildePressed = false, _tabPressed = false, _isDevmode = true;
 
         public MainWindow()
         {
@@ -320,6 +322,65 @@ namespace ExamScheduleApp
             {
                 MessageBox.Show($"Ошибка при обновлении данных: {ex.Message}");
             }
+        }
+
+        private void Window_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            switch (e.Key)
+            {
+                case Key.LeftCtrl:
+                    _ctrlPressed = true;
+                    break;
+                case Key.OemTilde:
+                    _tildePressed = true;
+                    break;
+                case Key.Space:
+                    _tabPressed = true;
+                    break;
+            }
+
+            if (_isDevmode) CheckCombination();
+        }
+
+        private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            switch (e.Key)
+            {
+                case Key.LeftCtrl:
+                    _ctrlPressed = false;
+                    break;
+                case Key.OemTilde:
+                    _tildePressed = false;
+                    break;
+                case Key.Tab:
+                    _tabPressed = false;
+                    break;
+            }
+        }
+
+        private void CheckCombination()
+        {
+            if (_ctrlPressed && _tildePressed && _tabPressed && _isDevmode)
+            {
+                var window = new DevWindow(_exams, dbhelper)
+                {
+                    Owner = this
+                };
+                window.Closed += DevWindow_Closed;
+                window.Show();
+
+                _ctrlPressed = false;
+                _tildePressed = false;
+                _tabPressed = false;
+            }
+        }
+
+        private void DevWindow_Closed(object sender, EventArgs e)
+        {
+            // Обновляем данные из базы после закрытия окна разработчика
+            RefreshExamsData();
+            MessageBox.Show("Расписание обновлено", "Информация",
+                MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 }
