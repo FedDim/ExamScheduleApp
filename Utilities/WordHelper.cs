@@ -48,25 +48,25 @@ namespace ExamScheduleApp.Utilities
 
         private void CreateDocumentByDate(string filePath)
         {
-            CreateDocumentInternal("Расписание промежуточной аттестации (по дате)", CreateTableFromExams, filePath);
+            CreateDocumentInternal("Расписание промежуточной аттестации (по дате)", CreateTableFromExams, filePath, false);
         }
 
         private void CreateDocumentByTeachers(string filePath)
         {
-            CreateDocumentInternal("Расписание промежуточной аттестации (по преподавателям)", CreateTableFromTeachers, filePath);
+            CreateDocumentInternal("Расписание промежуточной аттестации (по преподавателям)", CreateTableFromTeachers, filePath, false);
         }
 
         private void CreateDocumentBySubjects(string filePath)
         {
-            CreateDocumentInternal("Расписание промежуточной аттестации (по дисциплинам)", CreateTableFromSubjects, filePath);
+            CreateDocumentInternal("Расписание промежуточной аттестации (по дисциплинам)", CreateTableFromSubjects, filePath, false);
         }
 
         private void CreateDocumentByDepartments(string filePath)
         {
-            CreateDocumentInternal("Расписание промежуточной аттестации (по отделениям)", CreateTableFromDepartments, filePath);
+            CreateDocumentInternal("Расписание промежуточной аттестации (по отделениям)", CreateTableFromDepartments, filePath, true);
         }
 
-        private void CreateDocumentInternal(string title, Action tableCreationMethod, string filePath)
+        private void CreateDocumentInternal(string title, Action tableCreationMethod, string filePath, bool isDepartmentDocument)
         {
             try
             {
@@ -76,7 +76,7 @@ namespace ExamScheduleApp.Utilities
                 _doc = _wordApp.Documents.Add();
 
                 // Настройка параметров страницы
-                ConfigurePageSetup();
+                ConfigurePageSetup(isDepartmentDocument);
 
                 // Добавляем нижний колонтитул с номерами страниц
                 AddPageNumbers();
@@ -87,6 +87,9 @@ namespace ExamScheduleApp.Utilities
                 // Создаем таблицу
                 tableCreationMethod();
 
+                // Добавляем подпись зав. учебной частью в конце документа
+                AddEducationalPartSignature();
+
                 _doc.SaveAs2(filePath);
             }
             catch (Exception ex)
@@ -96,6 +99,100 @@ namespace ExamScheduleApp.Utilities
             finally
             {
                 Cleanup();
+            }
+        }
+
+        private void AddEducationalPartSignature()
+        {
+            try
+            {
+                // Формируем текущую дату без скобок
+                string todayDate = DateTime.Now.ToString("dd.MM.yyyy");
+
+                // Создаем список строк как в шапке, но с другим текстом
+                List<string> signatureLines = new List<string>
+                {
+                    "Зав. Учебной частью",
+                    "______________________Кожекина И.Ю.",
+                    todayDate  // Дата без скобок
+                };
+
+                for (int i = 0; i < signatureLines.Count; i++)
+                {
+                    Word.Paragraph paragraph = _doc.Content.Paragraphs.Add();
+
+                    paragraph.Range.Text = "\t" + signatureLines[i];
+
+                    SafeSetFont(paragraph.Range.Font, "Times New Roman", 12, 0);
+
+                    paragraph.Format.SpaceAfter = 0;
+
+                    // Устанавливаем отступы как в шапке
+                    if (i == 0)
+                    {
+                        // Первая строка подписи сразу под таблицей (SpaceBefore = 0)
+                        paragraph.Format.SpaceBefore = 0;
+                    }
+                    else
+                    {
+                        // Последующие строки без отступа сверху
+                        paragraph.Format.SpaceBefore = 0;
+                    }
+
+                    // Устанавливаем междустрочный интервал 1,15 только для второй строки (подпись)
+                    if (i == 1) // Вторая строка (Кожекина И.Ю.)
+                    {
+                        paragraph.Format.LineSpacingRule = Word.WdLineSpacing.wdLineSpaceMultiple;
+                        paragraph.Format.LineSpacing = 1.15f;
+                    }
+                    else
+                    {
+                        paragraph.Format.LineSpacingRule = Word.WdLineSpacing.wdLineSpaceSingle;
+                    }
+
+                    paragraph.Format.Alignment = Word.WdParagraphAlignment.wdAlignParagraphLeft;
+
+                    // Устанавливаем табуляцию как в шапке
+                    paragraph.Format.TabStops.Add(_wordApp.CentimetersToPoints(9.5f));
+
+                    paragraph.Range.InsertParagraphAfter();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при добавлении подписи зав. учебной частью: {ex.Message}");
+            }
+        }
+
+        private void ConfigurePageSetup(bool isDepartmentDocument)
+        {
+            try
+            {
+                Word.PageSetup pageSetup = _doc.PageSetup;
+
+                if (isDepartmentDocument)
+                {
+                    // Для документа по отделениям: все поля по 1 см
+                    pageSetup.TopMargin = _wordApp.CentimetersToPoints(1.0f);
+                    pageSetup.BottomMargin = _wordApp.CentimetersToPoints(1.0f);
+                    pageSetup.LeftMargin = _wordApp.CentimetersToPoints(1.0f);
+                    pageSetup.RightMargin = _wordApp.CentimetersToPoints(1.0f);
+                }
+                else
+                {
+                    // Для остальных документов: стандартные поля
+                    pageSetup.TopMargin = _wordApp.CentimetersToPoints(2.0f);
+                    pageSetup.BottomMargin = _wordApp.CentimetersToPoints(2.0f);
+                    pageSetup.LeftMargin = _wordApp.CentimetersToPoints(2.1f);
+                    pageSetup.RightMargin = _wordApp.CentimetersToPoints(1.0f);
+                }
+
+                pageSetup.Gutter = _wordApp.CentimetersToPoints(0f);
+                pageSetup.GutterPos = Word.WdGutterStyle.wdGutterPosLeft;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка в настройке страницы: {ex.Message}");
             }
         }
 
@@ -225,11 +322,11 @@ namespace ExamScheduleApp.Utilities
         {
             try
             {
-                // Формируем строку преподавателя
-                string teacherDisplay = GetLastName(exam.Teacher1Name);
+                // Формируем строку преподавателя с инициалами
+                string teacherDisplay = GetFullTeacherName(exam.Teacher1Name);
                 if (!string.IsNullOrEmpty(exam.Teacher2Name))
                 {
-                    teacherDisplay = $"{GetLastName(exam.Teacher1Name)}/{GetLastName(exam.Teacher2Name)}";
+                    teacherDisplay = $"{GetFullTeacherName(exam.Teacher1Name)}/{GetFullTeacherName(exam.Teacher2Name)}";
                 }
 
                 // Первая ячейка (Группа) оставляем пустой, так как группа уже указана выше
@@ -369,10 +466,11 @@ namespace ExamScheduleApp.Utilities
         {
             try
             {
-                string teacherDisplay = GetLastName(exam.Teacher1Name);
+                // Используем метод с инициалами
+                string teacherDisplay = GetFullTeacherName(exam.Teacher1Name);
                 if (!string.IsNullOrEmpty(exam.Teacher2Name))
                 {
-                    teacherDisplay = $"{GetLastName(exam.Teacher1Name)}/{GetLastName(exam.Teacher2Name)}";
+                    teacherDisplay = $"{GetFullTeacherName(exam.Teacher1Name)}/{GetFullTeacherName(exam.Teacher2Name)}";
                 }
 
                 // Данные с добавленной колонкой Аудитория
@@ -408,7 +506,8 @@ namespace ExamScheduleApp.Utilities
                 {
                     if (!string.IsNullOrEmpty(exam.Teacher1Name))
                     {
-                        string teacherKey = GetLastName(exam.Teacher1Name);
+                        // Используем метод с инициалами для группировки
+                        string teacherKey = GetFullTeacherName(exam.Teacher1Name);
                         if (!allTeachers.ContainsKey(teacherKey))
                         {
                             allTeachers[teacherKey] = new List<ExamSchedule>();
@@ -418,7 +517,8 @@ namespace ExamScheduleApp.Utilities
 
                     if (!string.IsNullOrEmpty(exam.Teacher2Name))
                     {
-                        string teacherKey = GetLastName(exam.Teacher2Name);
+                        // Используем метод с инициалами для группировки
+                        string teacherKey = GetFullTeacherName(exam.Teacher2Name);
                         if (!allTeachers.ContainsKey(teacherKey))
                         {
                             allTeachers[teacherKey] = new List<ExamSchedule>();
@@ -465,7 +565,7 @@ namespace ExamScheduleApp.Utilities
                 foreach (var teacher in sortedTeachers)
                 {
                     Word.Cell teacherCell = table.Cell(currentRow, 1);
-                    teacherCell.Range.Text = teacher.Key;
+                    teacherCell.Range.Text = teacher.Key; // Используем полное имя с инициалами
                     table.Cell(currentRow, 1).Merge(table.Cell(currentRow, 6)); // Объединяем 6 колонок
                     FormatCell(teacherCell, "Times New Roman", 14, true, 14, Word.WdParagraphAlignment.wdAlignParagraphCenter);
                     teacherCell.Shading.BackgroundPatternColor = Word.WdColor.wdColorWhite;
@@ -596,10 +696,11 @@ namespace ExamScheduleApp.Utilities
         {
             try
             {
-                string teacherDisplay = GetLastName(exam.Teacher1Name);
+                // Используем метод с инициалами
+                string teacherDisplay = GetFullTeacherName(exam.Teacher1Name);
                 if (!string.IsNullOrEmpty(exam.Teacher2Name))
                 {
-                    teacherDisplay = $"{GetLastName(exam.Teacher1Name)}/{GetLastName(exam.Teacher2Name)}";
+                    teacherDisplay = $"{GetFullTeacherName(exam.Teacher1Name)}/{GetFullTeacherName(exam.Teacher2Name)}";
                 }
 
                 // Данные с добавленной колонкой Аудитория
@@ -623,6 +724,39 @@ namespace ExamScheduleApp.Utilities
             {
                 MessageBox.Show($"Ошибка при добавлении данных экзамена в строку {rowNumber}: {ex.Message}");
             }
+        }
+
+        // Новый метод для получения полного имени преподавателя с инициалами
+        private string GetFullTeacherName(string fullName)
+        {
+            if (string.IsNullOrEmpty(fullName))
+                return "";
+
+            // Если в имени уже есть инициалы, просто возвращаем его
+            // Проверяем наличие точки, что обычно указывает на инициалы
+            if (fullName.Contains("."))
+                return fullName;
+
+            // Иначе пробуем преобразовать ФИО в формат с инициалами
+            string[] nameParts = fullName.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (nameParts.Length >= 2)
+            {
+                // Формируем строку в формате "Фамилия И.О."
+                string lastName = nameParts[0];
+                string initials = "";
+
+                for (int i = 1; i < nameParts.Length; i++)
+                {
+                    if (!string.IsNullOrEmpty(nameParts[i]))
+                    {
+                        initials += nameParts[i][0] + ".";
+                    }
+                }
+
+                return $"{lastName} {initials}";
+            }
+
+            return fullName; // Если только фамилия или один элемент
         }
 
         private string GetLastName(string fullName)
@@ -665,24 +799,6 @@ namespace ExamScheduleApp.Utilities
             catch (Exception ex)
             {
                 MessageBox.Show($"Ошибка при добавлении номеров страниц: {ex.Message}");
-            }
-        }
-
-        private void ConfigurePageSetup()
-        {
-            try
-            {
-                Word.PageSetup pageSetup = _doc.PageSetup;
-                pageSetup.TopMargin = _wordApp.CentimetersToPoints(2.0f);
-                pageSetup.BottomMargin = _wordApp.CentimetersToPoints(2.0f);
-                pageSetup.LeftMargin = _wordApp.CentimetersToPoints(2.1f);
-                pageSetup.RightMargin = _wordApp.CentimetersToPoints(1.0f);
-                pageSetup.Gutter = _wordApp.CentimetersToPoints(0f);
-                pageSetup.GutterPos = Word.WdGutterStyle.wdGutterPosLeft;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка в настройке страницы: {ex.Message}");
             }
         }
 
