@@ -133,27 +133,21 @@ namespace ExamScheduleApp.Utilities
                         // Первая строка подписи сразу под таблицей (SpaceBefore = 0)
                         paragraph.Format.SpaceBefore = 0;
                     }
+                    else if (i == 1)
+                    {
+                        paragraph.Format.SpaceBefore = 1;
+                    }
                     else
                     {
                         // Последующие строки без отступа сверху
                         paragraph.Format.SpaceBefore = 0;
                     }
 
-                    // Устанавливаем междустрочный интервал 1,15 только для второй строки (подпись)
-                    if (i == 1) // Вторая строка (Кожекина И.Ю.)
-                    {
-                        paragraph.Format.LineSpacingRule = Word.WdLineSpacing.wdLineSpaceMultiple;
-                        paragraph.Format.LineSpacing = 1.15f;
-                    }
-                    else
-                    {
-                        paragraph.Format.LineSpacingRule = Word.WdLineSpacing.wdLineSpaceSingle;
-                    }
-
+                    paragraph.Format.LineSpacingRule = Word.WdLineSpacing.wdLineSpaceSingle;
                     paragraph.Format.Alignment = Word.WdParagraphAlignment.wdAlignParagraphLeft;
 
-                    // Устанавливаем табуляцию как в шапке
-                    paragraph.Format.TabStops.Add(_wordApp.CentimetersToPoints(9.5f));
+                    // Без табуляции
+                    // paragraph.Format.TabStops.Add(_wordApp.CentimetersToPoints(9.5f));
 
                     paragraph.Range.InsertParagraphAfter();
                 }
