@@ -19,7 +19,6 @@
 
         public ExamSchedule() { }
 
-        // Конструктор для обратной совместимости
         public ExamSchedule(string surname, string secondSurname, string examDate,
                                   string subject, string group, string department,
                                   string time, string classroom, string type)

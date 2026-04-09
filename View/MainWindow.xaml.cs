@@ -30,11 +30,9 @@ namespace ExamScheduleApp
             InitializeComponent();
             try
             {
-                // Диагностика базы данных
-                dbhelper.CheckDatabaseStructure();
-
-                // Обновляем существующие записи
-                dbhelper.UpdateExamFields();
+                // Диагностика баз данных
+                dbhelper.CheckDatabaseStructure(); //Сетевая (Справочник)
+                dbhelper.CheckLocalDatabaseStructure(); //Локальная (Расписание)
 
                 // Очищаем проблемные данные (для SimpleDatabaseHelper.cs)
                 dbhelper.CleanProblematicData();

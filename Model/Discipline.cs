@@ -8,7 +8,6 @@
         public string ShortName9 { get; set; }
         public string ShortName5 { get; set; }
 
-        // Для обратной совместимости с кодом
         public string Name => ShortName9;
         public string Code => ShortName5;
 
