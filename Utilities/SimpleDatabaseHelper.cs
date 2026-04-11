@@ -22,6 +22,8 @@ namespace ExamScheduleApp.Utilities
         {
             try
             {
+                Logger.Info("Начата проверка структуры сетевой БД");
+
                 using (var connection = new SQLiteConnection(GetConnectionString()))
                 {
                     connection.Open();
@@ -39,9 +41,13 @@ namespace ExamScheduleApp.Utilities
                     CheckTableStructure(connection, "Groups");
                     CheckTableStructure(connection, "Disciplines");
                 }
+
+                Logger.Info("Проверка структуры сетевой БД успешно завершена");
+
             }
             catch (Exception ex)
             {
+                Logger.Error("Ошибка при проверке структуры сетевой БД", ex);
                 MessageBox.Show($"Ошибка проверки структуры сетевой БД: {ex.Message}");
             }
         }
@@ -50,15 +56,21 @@ namespace ExamScheduleApp.Utilities
         {
             try
             {
+                Logger.Info($"Начата проверка структуры таблиц сетевой БД");
+
                 string query = $"PRAGMA table_info({tableName});";
                 using (var command = new SQLiteCommand(query, connection))
                 using (var reader = command.ExecuteReader())
                 {
                     while (reader.Read()) { }
                 }
+
+                Logger.Info("Проверка структуры таблиц сетевой БД успешно завершена");
+
             }
             catch (Exception ex)
             {
+                Logger.Error($"Ошибка при проверке таблицы {tableName}", ex);
                 MessageBox.Show($"Ошибка проверки таблицы {tableName}: {ex.Message}");
             }
         }
@@ -85,9 +97,11 @@ namespace ExamScheduleApp.Utilities
             try
             {
                 // ДЛЯ ОТЛАДКИ
-                string dbPath = GetLocalDatabasePath();
-                MessageBox.Show($"Локальная БД используется по пути:\n{dbPath}", "Информация", MessageBoxButton.OK, MessageBoxImage.Information); // для отладки
+                //string dbPath = GetLocalDatabasePath();
+                //MessageBox.Show($"Локальная БД используется по пути:\n{dbPath}", "Информация", MessageBoxButton.OK, MessageBoxImage.Information); // для отладки
                 //===================================================
+
+                Logger.Info("Начата проверка/создание локальной БД");
 
                 using (var connection = new SQLiteConnection(GetLocalConnectionString()))
                 {
@@ -124,11 +138,14 @@ namespace ExamScheduleApp.Utilities
                     if (!columns.Contains("ExamType"))
                         new SQLiteCommand("ALTER TABLE Exams ADD COLUMN ExamType TEXT;", connection).ExecuteNonQuery();
                 }
+
+                Logger.Info("Локальная база данных успешно проверена/создана");
+
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка работы с локальной БД:\n{ex.Message}\n\nПуть: {GetLocalDatabasePath()}",
-                                        "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Ошибка работы с локальной БД:\n{ex.Message}\n\nПуть: {GetLocalDatabasePath()}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                Logger.Error("Ошибка CheckLocalDatabaseStructure", ex);
             }
         }
         #endregion
@@ -139,6 +156,8 @@ namespace ExamScheduleApp.Utilities
             var exams = new List<ExamSchedule>();
             try
             {
+                Logger.Info("Начата загрузка экзаменов из локальной БД");
+
                 using (var connection = new SQLiteConnection(GetLocalConnectionString()))
                 {
                     connection.Open();
@@ -174,10 +193,15 @@ namespace ExamScheduleApp.Utilities
                         }
                     }
                 }
+
+                Logger.Info($"Загружено {exams.Count} экзаменов из локальной БД");
+
             }
             catch (Exception ex)
             {
+                Logger.Error("Ошибка загрузки экзаменов", ex);
                 MessageBox.Show($"Ошибка загрузки экзаменов: {ex.Message}");
+                return new List<ExamSchedule>();
             }
             return exams;
         }
@@ -211,10 +235,13 @@ namespace ExamScheduleApp.Utilities
                     }
                 }
 
-                if (showInfo) MessageBox.Show("Экзамен успешно добавлен в базу данных!");
+                Logger.Info($"Добавлен экзамен: {exam.SubjectName} | {exam.GroupName} | {exam.ExamDate}");
+                if (showInfo) MessageBox.Show("Экзамен успешно добавлен!");
+
             }
             catch (Exception ex)
             {
+                Logger.Error("Ошибка AddExam", ex);
                 MessageBox.Show($"Ошибка добавления экзамена: {ex.Message}");
             }
         }
@@ -223,6 +250,8 @@ namespace ExamScheduleApp.Utilities
         {
             try
             {
+                Logger.Warning($"Удаление экзамена ID: {examId}");
+
                 using (var connection = new SQLiteConnection(GetLocalConnectionString()))
                 {
                     connection.Open();
@@ -236,15 +265,23 @@ namespace ExamScheduleApp.Utilities
                         if (showInfo)
                         {
                             if (rowsDeleted > 0)
+                            {
+                                Logger.Info($"Экзамен ID {examId} успешно удалён");
                                 MessageBox.Show("Экзамен успешно удален из базы данных");
+                            }
+
                             else
+                            {
+                                Logger.Warning($"Экзамен ID {examId} не найден");
                                 MessageBox.Show("Экзамен не найден");
+                            }
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
+                Logger.Error($"Ошибка удаления экзамена ID {examId}", ex);
                 MessageBox.Show($"Ошибка удаления экзамена: {ex.Message}");
             }
         }
@@ -253,6 +290,8 @@ namespace ExamScheduleApp.Utilities
         {
             try
             {
+                Logger.Warning("Запрошена полная очистка всех экзаменов в локальной БД");
+
                 using (var connection = new SQLiteConnection(GetLocalConnectionString()))
                 {
                     connection.Open();
@@ -260,11 +299,13 @@ namespace ExamScheduleApp.Utilities
                     using (var command = new SQLiteCommand(query, connection))
                     {
                         command.ExecuteNonQuery();
+                        Logger.Info("Все экзамены из локальной БД были успешно удалены");
                     }
                 }
             }
             catch (Exception ex)
             {
+                Logger.Error("Ошибка в очистке всего списка экзаменов", ex);
                 MessageBox.Show($"Ошибка очистки экзаменов: {ex.Message}");
             }
         }
@@ -368,6 +409,8 @@ namespace ExamScheduleApp.Utilities
             var teachers = new List<Teacher>();
             try
             {
+                Logger.Info("Загрузка списка преподавателей...");
+
                 using (var connection = new SQLiteConnection(GetConnectionString()))
                 {
                     connection.Open();
@@ -388,9 +431,12 @@ namespace ExamScheduleApp.Utilities
                         }
                     }
                 }
+
+                Logger.Info($"Успешно загружено {teachers.Count} преподавателей");
             }
             catch (Exception ex)
             {
+                Logger.Error("Ошибка загрузки преподавателей", ex);
                 MessageBox.Show($"Ошибка загрузки преподавателей: {ex.Message}");
             }
             return teachers;
@@ -401,6 +447,8 @@ namespace ExamScheduleApp.Utilities
             var subjects = new List<Subject>();
             try
             {
+                Logger.Info("Загрузка списка дисциплин...");
+
                 using (var connection = new SQLiteConnection(GetConnectionString()))
                 {
                     connection.Open();
@@ -422,9 +470,12 @@ namespace ExamScheduleApp.Utilities
                         }
                     }
                 }
+
+                Logger.Info($"Успешно загружено {subjects.Count} дисциплин");
             }
             catch (Exception ex)
             {
+                Logger.Error("Ошибка загрузки дисциплин", ex);
                 MessageBox.Show($"Ошибка загрузки дисциплин: {ex.Message}");
             }
             return subjects;
@@ -435,6 +486,7 @@ namespace ExamScheduleApp.Utilities
             var groups = new List<Group>();
             try
             {
+                Logger.Info("Загрузка списка групп...");
                 using (var connection = new SQLiteConnection(GetConnectionString()))
                 {
                     connection.Open();
@@ -454,9 +506,11 @@ namespace ExamScheduleApp.Utilities
                         }
                     }
                 }
+                Logger.Info($"Успешно загружено {groups.Count} групп");
             }
             catch (Exception ex)
             {
+                Logger.Error("Ошибка загрузки групп", ex);
                 MessageBox.Show($"Ошибка загрузки групп: {ex.Message}");
             }
             return groups;
@@ -464,17 +518,27 @@ namespace ExamScheduleApp.Utilities
 
         public void AddTeacher(Teacher teacher)
         {
-            string query = "INSERT INTO Teachers (name, classroom, academicBuilding) VALUES (@Name, @Classroom, @AcademicBuilding)";
-            using (var connection = new SQLiteConnection(GetConnectionString()))
+            try
             {
-                connection.Open();
-                using (var command = new SQLiteCommand(query, connection))
+                Logger.Info($"Добавление преподавателя: {teacher.Name}");
+                string query = "INSERT INTO Teachers (name, classroom, academicBuilding) VALUES (@Name, @Classroom, @AcademicBuilding)";
+                using (var connection = new SQLiteConnection(GetConnectionString()))
                 {
-                    command.Parameters.AddWithValue("@Name", teacher.Name);
-                    command.Parameters.AddWithValue("@Classroom", teacher.Classroom);
-                    command.Parameters.AddWithValue("@AcademicBuilding", teacher.AcademicBuilding);
-                    command.ExecuteNonQuery();
+                    connection.Open();
+                    using (var command = new SQLiteCommand(query, connection))
+                    {
+                        command.Parameters.AddWithValue("@Name", teacher.Name);
+                        command.Parameters.AddWithValue("@Classroom", teacher.Classroom);
+                        command.Parameters.AddWithValue("@AcademicBuilding", teacher.AcademicBuilding);
+                        command.ExecuteNonQuery();
+                    }
                 }
+                Logger.Info($"Преподаватель {teacher.Name} успешно добавлен");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Ошибка добавления преподавателя {teacher?.Name}", ex);
+                MessageBox.Show($"Ошибка добавления преподавателя: {ex.Message}");
             }
         }
 
@@ -482,6 +546,7 @@ namespace ExamScheduleApp.Utilities
         {
             try
             {
+                Logger.Info($"Добавление дисциплины: {subject.ShortName9}");
                 using (var connection = new SQLiteConnection(GetConnectionString()))
                 {
                     connection.Open();
@@ -498,26 +563,38 @@ namespace ExamScheduleApp.Utilities
                         command.ExecuteNonQuery();
                     }
                 }
+                Logger.Info($"Дисциплина '{subject.ShortName9}' успешно добавлена");
                 MessageBox.Show($"Дисциплина '{subject.ShortName9}' успешно добавлена!");
             }
             catch (Exception ex)
             {
+                Logger.Error($"Ошибка добавления дисциплины {subject?.ShortName9}", ex);
                 MessageBox.Show($"Ошибка добавления дисциплины: {ex.Message}");
             }
         }
 
         public void AddGroup(Group group)
         {
-            string query = "INSERT INTO Groups (name, department) VALUES (@Name, @Department)";
-            using (var connection = new SQLiteConnection(GetConnectionString()))
+            try
             {
-                connection.Open();
-                using (var command = new SQLiteCommand(query, connection))
+                Logger.Info($"Добавление группы: {group.Name}");
+                string query = "INSERT INTO Groups (name, department) VALUES (@Name, @Department)";
+                using (var connection = new SQLiteConnection(GetConnectionString()))
                 {
-                    command.Parameters.AddWithValue("@Name", group.Name);
-                    command.Parameters.AddWithValue("@Department", group.Department ?? "");
-                    command.ExecuteNonQuery();
+                    connection.Open();
+                    using (var command = new SQLiteCommand(query, connection))
+                    {
+                        command.Parameters.AddWithValue("@Name", group.Name);
+                        command.Parameters.AddWithValue("@Department", group.Department ?? "");
+                        command.ExecuteNonQuery();
+                    }
                 }
+                Logger.Info($"Группа {group.Name} успешно добавлена");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Ошибка добавления группы {group?.Name}", ex);
+                MessageBox.Show($"Ошибка добавления группы: {ex.Message}");
             }
         }
 
@@ -570,6 +647,7 @@ namespace ExamScheduleApp.Utilities
         {
             try
             {
+                Logger.Info($"Обновление преподавателя: {teacher.Name} (ID: {teacher.Id})");
                 using (var connection = new SQLiteConnection(GetConnectionString()))
                 {
                     connection.Open();
@@ -583,9 +661,11 @@ namespace ExamScheduleApp.Utilities
                         command.ExecuteNonQuery();
                     }
                 }
+                Logger.Info($"Преподаватель {teacher.Name} успешно обновлён");
             }
             catch (Exception ex)
             {
+                Logger.Error($"Ошибка обновления преподавателя {teacher?.Name}", ex);
                 MessageBox.Show($"Ошибка обновления преподавателя: {ex.Message}");
             }
         }
@@ -594,6 +674,7 @@ namespace ExamScheduleApp.Utilities
         {
             try
             {
+                Logger.Warning($"Попытка удаления преподавателя ID: {teacherId}");
                 using (var connection = new SQLiteConnection(GetConnectionString()))
                 {
                     connection.Open();
@@ -604,9 +685,11 @@ namespace ExamScheduleApp.Utilities
                         command.ExecuteNonQuery();
                     }
                 }
+                Logger.Info($"Преподаватель ID {teacherId} успешно удалён");
             }
             catch (Exception ex)
             {
+                Logger.Error($"Ошибка удаления преподавателя ID {teacherId}", ex);
                 MessageBox.Show($"Ошибка удаления преподавателя: {ex.Message}");
             }
         }
@@ -615,6 +698,7 @@ namespace ExamScheduleApp.Utilities
         {
             try
             {
+                Logger.Info($"Обновление дисциплины: {subject.ShortName9} (ID: {subject.Id})");
                 using (var connection = new SQLiteConnection(GetConnectionString()))
                 {
                     connection.Open();
@@ -629,9 +713,11 @@ namespace ExamScheduleApp.Utilities
                         command.ExecuteNonQuery();
                     }
                 }
+                Logger.Info($"Дисциплина {subject.ShortName9} успешно обновлена");
             }
             catch (Exception ex)
             {
+                Logger.Error($"Ошибка обновления дисциплины {subject?.ShortName9}", ex);
                 MessageBox.Show($"Ошибка обновления дисциплины: {ex.Message}");
             }
         }
@@ -640,6 +726,7 @@ namespace ExamScheduleApp.Utilities
         {
             try
             {
+                Logger.Warning($"Попытка удаления дисциплины ID: {subjectId}");
                 using (var connection = new SQLiteConnection(GetConnectionString()))
                 {
                     connection.Open();
@@ -650,9 +737,11 @@ namespace ExamScheduleApp.Utilities
                         command.ExecuteNonQuery();
                     }
                 }
+                Logger.Info($"Дисциплина ID {subjectId} успешно удалена");
             }
             catch (Exception ex)
             {
+                Logger.Error($"Ошибка удаления дисциплины ID {subjectId}", ex);
                 MessageBox.Show($"Ошибка удаления дисциплины: {ex.Message}");
             }
         }
@@ -661,6 +750,7 @@ namespace ExamScheduleApp.Utilities
         {
             try
             {
+                Logger.Info($"Обновление группы: {group.Name} (ID: {group.Id})");
                 using (var connection = new SQLiteConnection(GetConnectionString()))
                 {
                     connection.Open();
@@ -673,9 +763,11 @@ namespace ExamScheduleApp.Utilities
                         command.ExecuteNonQuery();
                     }
                 }
+                Logger.Info($"Группа {group.Name} успешно обновлена");
             }
             catch (Exception ex)
             {
+                Logger.Error($"Ошибка обновления группы {group?.Name}", ex);
                 MessageBox.Show($"Ошибка обновления группы: {ex.Message}");
             }
         }
@@ -684,6 +776,7 @@ namespace ExamScheduleApp.Utilities
         {
             try
             {
+                Logger.Warning($"Попытка удаления группы ID: {groupId}");
                 using (var connection = new SQLiteConnection(GetConnectionString()))
                 {
                     connection.Open();
@@ -694,9 +787,11 @@ namespace ExamScheduleApp.Utilities
                         command.ExecuteNonQuery();
                     }
                 }
+                Logger.Info($"Группа ID {groupId} успешно удалена");
             }
             catch (Exception ex)
             {
+                Logger.Error($"Ошибка удаления группы ID {groupId}", ex);
                 MessageBox.Show($"Ошибка удаления группы: {ex.Message}");
             }
         }
@@ -705,6 +800,7 @@ namespace ExamScheduleApp.Utilities
         {
             try
             {
+                Logger.Info("Начата очистка проблемных данных в справочниках");
                 using (var connection = new SQLiteConnection(GetConnectionString()))
                 {
                     connection.Open();
@@ -718,13 +814,17 @@ namespace ExamScheduleApp.Utilities
                     {
                         using (var command = new SQLiteCommand(query, connection))
                         {
-                            command.ExecuteNonQuery();
+                            int affected = command.ExecuteNonQuery();
+                            if (affected > 0)
+                                Logger.Info($"Удалено {affected} проблемных записей в справочниках");
                         }
                     }
                 }
+                Logger.Info("Очистка проблемных данных завершена");
             }
             catch (Exception ex)
             {
+                Logger.Error("Ошибка очистки проблемных данных", ex);
                 MessageBox.Show($"Ошибка очистки данных: {ex.Message}");
             }
         }

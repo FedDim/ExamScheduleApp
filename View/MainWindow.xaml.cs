@@ -28,9 +28,11 @@ namespace ExamScheduleApp
         public MainWindow()
         {
             InitializeComponent();
+
+            Logger.Info("=== Приложение запущено ===");
+
             try
             {
-                // Диагностика баз данных
                 dbhelper.CheckDatabaseStructure(); //Сетевая (Справочник)
                 dbhelper.CheckLocalDatabaseStructure(); //Локальная (Расписание)
 
@@ -42,9 +44,12 @@ namespace ExamScheduleApp
 
                 // Загрузка данных
                 LoadDataFromDatabase();
+
+                Logger.Info("Приложение успешно инициализировано");
             }
             catch (Exception ex)
             {
+                Logger.Error("Критическая ошибка при запуске приложения", ex);
                 MessageBox.Show($"Ошибка при запуске приложения: {ex.Message}");
             }
         }
