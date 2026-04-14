@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
+using System.Data.SqlClient;
 using System.Data.SQLite;
 using System.IO;
 using System.Windows;
@@ -11,162 +12,434 @@ namespace ExamScheduleApp.Utilities
 {
     public class SimpleDatabaseHelper
     {
-        #region СЕТЕВАЯ БД (справочники)
-        public string GetConnectionString()
-        {
-            string dbPath = ConfigurationManager.AppSettings["DatabasePath"];
-            return $"Data Source={dbPath};Version=3;Journal Mode=Delete;Pooling=False;BusyTimeout=30000;Synchronous=Normal;Cache=Shared;";
-        }
+        // ====================== ПОДКЛЮЧЕНИЯ ======================
+        private readonly string _serverConnectionString;   // SQL Server — справочники
+        private readonly string _localConnectionString;    // SQLite — расписание
 
-        public void CheckDatabaseStructure()
+        public SimpleDatabaseHelper()
         {
             try
             {
-                Logger.Info("Начата проверка структуры сетевой БД");
+                _serverConnectionString = ConfigurationManager.ConnectionStrings["ExamScheduleServer"].ConnectionString;
 
-                using (var connection = new SQLiteConnection(GetConnectionString()))
-                {
-                    connection.Open();
+                string localPath = GetLocalDatabasePath();
+                _localConnectionString = $"Data Source={localPath};Version=3;Journal Mode=Delete;Pooling=False;BusyTimeout=30000;";
 
-                    using (var cmd = new SQLiteCommand(connection))
-                    {
-                        cmd.CommandText = "PRAGMA journal_mode=DELETE;";
-                        cmd.ExecuteNonQuery();
-
-                        cmd.CommandText = "PRAGMA busy_timeout=30000;";
-                        cmd.ExecuteNonQuery();
-                    }
-
-                    CheckTableStructure(connection, "Teachers");
-                    CheckTableStructure(connection, "Groups");
-                    CheckTableStructure(connection, "Disciplines");
-                }
-
-                Logger.Info("Проверка структуры сетевой БД успешно завершена");
-
+                Logger.Info("SimpleDatabaseHelper: Строки подключения загружены.");
             }
             catch (Exception ex)
             {
-                Logger.Error("Ошибка при проверке структуры сетевой БД", ex);
-                MessageBox.Show($"Ошибка проверки структуры сетевой БД: {ex.Message}");
+                Logger.Error("Критическая ошибка при чтении App.config", ex);
+                throw;
             }
         }
 
-        private void CheckTableStructure(SQLiteConnection connection, string tableName)
-        {
-            try
-            {
-                Logger.Info($"Начата проверка структуры таблиц сетевой БД");
-
-                string query = $"PRAGMA table_info({tableName});";
-                using (var command = new SQLiteCommand(query, connection))
-                using (var reader = command.ExecuteReader())
-                {
-                    while (reader.Read()) { }
-                }
-
-                Logger.Info("Проверка структуры таблиц сетевой БД успешно завершена");
-
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Ошибка при проверке таблицы {tableName}", ex);
-                MessageBox.Show($"Ошибка проверки таблицы {tableName}: {ex.Message}");
-            }
-        }
-        #endregion
-
-        #region ЛОКАЛЬНАЯ БД (расписание)
-        public string GetLocalDatabasePath()
+        private string GetLocalDatabasePath()
         {
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
             string dataFolder = Path.Combine(baseDir, "Data");
             Directory.CreateDirectory(dataFolder);
-
             return Path.Combine(dataFolder, "LocalExams.db");
         }
 
-        public string GetLocalConnectionString()
+        // ====================== ИНИЦИАЛИЗАЦИЯ ======================
+        public bool CheckServerConnection()
         {
-            string dbPath = GetLocalDatabasePath();
-            return $"Data Source={dbPath};Version=3;Journal Mode=Delete;Pooling=False;BusyTimeout=30000;Synchronous=Normal;Cache=Shared;";
+            using (var conn = new SqlConnection(_serverConnectionString))
+            {
+                try
+                {
+                    Logger.Info($"Попытка подключения к серверу: {conn.DataSource}");
+                    conn.Open();
+                    Logger.Info("Сетевая база данных доступна.");
+                    return true;
+                }
+                catch (SqlException ex)
+                {
+                    // Детальный разбор ошибок SQL
+                    string errorMsg = "Ошибка подключения к SQL Server:\n";
+                    switch (ex.Number)
+                    {
+                        case -1:
+                        case 2:
+                        case 53:
+                            errorMsg += "Сервер не найден или недоступен. Проверьте IP адрес и Firewall.";
+                            break;
+                        case 4060:
+                            errorMsg += "База данных ExamScheduleDB не найдена на сервере.";
+                            break;
+                        case 18456:
+                            errorMsg += "Ошибка входа. Проверьте логин (ExamAppUser) и пароль.";
+                            break;
+                        default:
+                            errorMsg += ex.Message;
+                            break;
+                    }
+                    Logger.Error(errorMsg, ex);
+                    MessageBox.Show(errorMsg, "Ошибка сети", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return false;
+                }
+            }
         }
 
         public void CheckLocalDatabaseStructure()
         {
             try
             {
-                // ДЛЯ ОТЛАДКИ
-                //string dbPath = GetLocalDatabasePath();
-                //MessageBox.Show($"Локальная БД используется по пути:\n{dbPath}", "Информация", MessageBoxButton.OK, MessageBoxImage.Information); // для отладки
-                //===================================================
-
-                Logger.Info("Начата проверка/создание локальной БД");
-
-                using (var connection = new SQLiteConnection(GetLocalConnectionString()))
+                using (var conn = new SQLiteConnection(_localConnectionString))
                 {
-                    connection.Open();
-
-                    string createTable = @"
+                    conn.Open();
+                    string sql = @"
                         CREATE TABLE IF NOT EXISTS Exams (
                             Id INTEGER PRIMARY KEY AUTOINCREMENT,
                             Teacher1Id INTEGER NOT NULL,
                             Teacher2Id INTEGER,
                             SubjectId INTEGER NOT NULL,
                             GroupId INTEGER NOT NULL,
-                            Classroom TEXT,
+                            Classroom TEXT NOT NULL,
                             Department TEXT,
-                            ExamDate TEXT,
-                            ExamTime TEXT,
-                            ExamType TEXT
+                            CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP
                         );";
 
-                    using (var cmd = new SQLiteCommand(createTable, connection))
+                    using (var cmd = new SQLiteCommand(sql, conn))
                         cmd.ExecuteNonQuery();
-
-                    var columns = new List<string>();
-                    using (var cmd = new SQLiteCommand("PRAGMA table_info(Exams);", connection))
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read()) columns.Add(reader.GetString(1));
-                    }
-
-                    if (!columns.Contains("ExamDate"))
-                        new SQLiteCommand("ALTER TABLE Exams ADD COLUMN ExamDate TEXT;", connection).ExecuteNonQuery();
-                    if (!columns.Contains("ExamTime"))
-                        new SQLiteCommand("ALTER TABLE Exams ADD COLUMN ExamTime TEXT;", connection).ExecuteNonQuery();
-                    if (!columns.Contains("ExamType"))
-                        new SQLiteCommand("ALTER TABLE Exams ADD COLUMN ExamType TEXT;", connection).ExecuteNonQuery();
                 }
-
-                Logger.Info("Локальная база данных успешно проверена/создана");
-
+                Logger.Info("Структура локальной БД проверена");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка работы с локальной БД:\n{ex.Message}\n\nПуть: {GetLocalDatabasePath()}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 Logger.Error("Ошибка CheckLocalDatabaseStructure", ex);
             }
         }
-        #endregion
 
-        #region РАБОТА С РАСПИСАНИЕМ (ЛОКАЛЬНАЯ БД)
+        // ====================== СПРАВОЧНИКИ (SQL Server) ======================
+        public List<Teacher> GetTeachers()
+        {
+            var list = new List<Teacher>();
+            using (var conn = new SqlConnection(_serverConnectionString))
+            {
+                try
+                {
+                    conn.Open();
+                    string sql = "SELECT Id, Name, Classroom, AcademicBuilding FROM Teachers ORDER BY Name";
+                    using (var cmd = new SqlCommand(sql, conn))
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            list.Add(new Teacher
+                            {
+                                Id = reader.GetInt32(0),
+                                Name = reader.IsDBNull(1) ? "" : reader.GetString(1),
+                                Classroom = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                                AcademicBuilding = reader.IsDBNull(3) ? 0 : reader.GetInt32(3)
+                            });
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Ошибка загрузки преподавателей", ex);
+                }
+            }
+            return list;
+        }
+
+        public List<Subject> GetSubjects()
+        {
+            var list = new List<Subject>();
+            try
+            {
+                using (var conn = new SqlConnection(_serverConnectionString))
+                using (var cmd = new SqlCommand("SELECT Id, FullName, ShortName12, ShortName9, ShortName5 FROM Disciplines ORDER BY ShortName9", conn))
+                {
+                    conn.Open();
+                    using (var r = cmd.ExecuteReader())
+                    {
+                        while (r.Read())
+                        {
+                            list.Add(new Subject
+                            {
+                                Id = r.GetInt32(0),
+                                FullName = r.IsDBNull(1) ? "" : r.GetString(1),
+                                ShortName12 = r.IsDBNull(2) ? "" : r.GetString(2),
+                                ShortName9 = r.GetString(3),
+                                ShortName5 = r.IsDBNull(4) ? "" : r.GetString(4)
+                            });
+                        }
+                    }
+                }
+                Logger.Info($"Загружено {list.Count} дисциплин");
+            }
+            catch (Exception ex) { Logger.Error("GetSubjects", ex); MessageBox.Show($"Ошибка дисциплин: {ex.Message}"); }
+            return list;
+        }
+
+        public List<Group> GetGroups()
+        {
+            var list = new List<Group>();
+            try
+            {
+                using (var conn = new SqlConnection(_serverConnectionString))
+                using (var cmd = new SqlCommand("SELECT Id, Name, Department FROM Groups ORDER BY Name", conn))
+                {
+                    conn.Open();
+                    using (var r = cmd.ExecuteReader())
+                    {
+                        while (r.Read())
+                        {
+                            list.Add(new Group
+                            {
+                                Id = r.GetInt32(0),
+                                Name = r.GetString(1),
+                                Department = r.IsDBNull(2) ? "" : r.GetString(2)
+                            });
+                        }
+                    }
+                }
+                Logger.Info($"Загружено {list.Count} групп");
+            }
+            catch (Exception ex) { Logger.Error("GetGroups", ex); MessageBox.Show($"Ошибка групп: {ex.Message}"); }
+            return list;
+        }
+
+        // ====================== EXISTS МЕТОДЫ ======================
+        public bool TeacherExists(string name)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_serverConnectionString))
+                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM Teachers WHERE Name = @name", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@name", name);
+                    int count = (int)cmd.ExecuteScalar();
+                    return count > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"TeacherExists ({name})", ex);
+                return false;
+            }
+        }
+
+        public bool SubjectExists(string shortName9)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_serverConnectionString))
+                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM Disciplines WHERE ShortName9 = @name", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@name", shortName9);
+                    int count = (int)cmd.ExecuteScalar();
+                    return count > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"SubjectExists ({shortName9})", ex);
+                return false;
+            }
+        }
+
+        public bool GroupExists(string name)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_serverConnectionString))
+                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM Groups WHERE Name = @name", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@name", name);
+                    int count = (int)cmd.ExecuteScalar();
+                    return count > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"GroupExists ({name})", ex);
+                return false;
+            }
+        }
+
+        // ====================== CRUD ДЛЯ СПРАВОЧНИКОВ ======================
+
+        // ==================== TEACHERS ====================
+        public void AddTeacher(Teacher teacher)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_serverConnectionString))
+                using (var cmd = new SqlCommand("INSERT INTO Teachers (Name, Classroom, AcademicBuilding) VALUES (@n, @c, @b)", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@n", teacher.Name);
+                    cmd.Parameters.AddWithValue("@c", teacher.Classroom ?? "");
+                    cmd.Parameters.AddWithValue("@b", teacher.AcademicBuilding);
+                    cmd.ExecuteNonQuery();
+                }
+                Logger.Info($"Добавлен преподаватель: {teacher.Name}");
+            }
+            catch (Exception ex) { Logger.Error($"AddTeacher {teacher?.Name}", ex); MessageBox.Show($"Ошибка добавления преподавателя: {ex.Message}"); }
+        }
+
+        public void UpdateTeacher(Teacher teacher)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_serverConnectionString))
+                using (var cmd = new SqlCommand("UPDATE Teachers SET Name=@n, Classroom=@c, AcademicBuilding=@b WHERE Id=@id", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@n", teacher.Name);
+                    cmd.Parameters.AddWithValue("@c", teacher.Classroom ?? "");
+                    cmd.Parameters.AddWithValue("@b", teacher.AcademicBuilding);
+                    cmd.Parameters.AddWithValue("@id", teacher.Id);
+                    cmd.ExecuteNonQuery();
+                }
+                Logger.Info($"Обновлён преподаватель ID {teacher.Id}");
+            }
+            catch (Exception ex) { Logger.Error($"UpdateTeacher {teacher?.Id}", ex); }
+        }
+
+        public void DeleteTeacher(int teacherId)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_serverConnectionString))
+                using (var cmd = new SqlCommand("DELETE FROM Teachers WHERE Id = @id", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@id", teacherId);
+                    cmd.ExecuteNonQuery();
+                }
+                Logger.Warning($"Удалён преподаватель ID: {teacherId}");
+            }
+            catch (Exception ex) { Logger.Error($"DeleteTeacher {teacherId}", ex); }
+        }
+
+        // ==================== SUBJECTS ====================
+        public void AddSubject(Subject subject)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_serverConnectionString))
+                using (var cmd = new SqlCommand("INSERT INTO Disciplines (FullName, ShortName12, ShortName9, ShortName5) VALUES (@f, @s12, @s9, @s5)", conn))
+                {
+                    conn.Open();
+                    string name = subject.ShortName9 ?? "";
+                    cmd.Parameters.AddWithValue("@f", name);
+                    cmd.Parameters.AddWithValue("@s12", name.Length > 12 ? name.Substring(0, 12) : name);
+                    cmd.Parameters.AddWithValue("@s9", name);
+                    cmd.Parameters.AddWithValue("@s5", name.Length > 5 ? name.Substring(0, 5) : name);
+                    cmd.ExecuteNonQuery();
+                }
+                Logger.Info($"Добавлена дисциплина: {subject.ShortName9}");
+            }
+            catch (Exception ex) { Logger.Error($"AddSubject {subject?.ShortName9}", ex); }
+        }
+
+        public void UpdateSubject(Subject subject)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_serverConnectionString))
+                using (var cmd = new SqlCommand("UPDATE Disciplines SET FullName=@f, ShortName12=@s12, ShortName9=@s9, ShortName5=@s5 WHERE Id=@id", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@f", subject.FullName);
+                    cmd.Parameters.AddWithValue("@s12", subject.ShortName12);
+                    cmd.Parameters.AddWithValue("@s9", subject.ShortName9);
+                    cmd.Parameters.AddWithValue("@s5", subject.ShortName5);
+                    cmd.Parameters.AddWithValue("@id", subject.Id);
+                    cmd.ExecuteNonQuery();
+                }
+                Logger.Info($"Обновлена дисциплина ID {subject.Id}");
+            }
+            catch (Exception ex) { Logger.Error($"UpdateSubject {subject?.Id}", ex); }
+        }
+
+        public void DeleteSubject(int subjectId)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_serverConnectionString))
+                using (var cmd = new SqlCommand("DELETE FROM Disciplines WHERE Id = @id", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@id", subjectId);
+                    cmd.ExecuteNonQuery();
+                }
+                Logger.Warning($"Удалена дисциплина ID: {subjectId}");
+            }
+            catch (Exception ex) { Logger.Error($"DeleteSubject {subjectId}", ex); }
+        }
+
+        // ==================== GROUPS ====================
+        public void AddGroup(Group group)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_serverConnectionString))
+                using (var cmd = new SqlCommand("INSERT INTO Groups (Name, Department) VALUES (@n, @d)", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@n", group.Name);
+                    cmd.Parameters.AddWithValue("@d", group.Department ?? "");
+                    cmd.ExecuteNonQuery();
+                }
+                Logger.Info($"Добавлена группа: {group.Name}");
+            }
+            catch (Exception ex) { Logger.Error($"AddGroup {group?.Name}", ex); }
+        }
+
+        public void UpdateGroup(Group group)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_serverConnectionString))
+                using (var cmd = new SqlCommand("UPDATE Groups SET Name=@n, Department=@d WHERE Id=@id", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@n", group.Name);
+                    cmd.Parameters.AddWithValue("@d", group.Department ?? "");
+                    cmd.Parameters.AddWithValue("@id", group.Id);
+                    cmd.ExecuteNonQuery();
+                }
+                Logger.Info($"Обновлена группа ID {group.Id}");
+            }
+            catch (Exception ex) { Logger.Error($"UpdateGroup {group?.Id}", ex); }
+        }
+
+        public void DeleteGroup(int groupId)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_serverConnectionString))
+                using (var cmd = new SqlCommand("DELETE FROM Groups WHERE Id = @id", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@id", groupId);
+                    cmd.ExecuteNonQuery();
+                }
+                Logger.Warning($"Удалена группа ID: {groupId}");
+            }
+            catch (Exception ex) { Logger.Error($"DeleteGroup {groupId}", ex); }
+        }
+
+        // ====================== РАСПИСАНИЕ (SQLite) ======================
         public List<ExamSchedule> GetExamSchedule()
         {
             var exams = new List<ExamSchedule>();
             try
             {
-                Logger.Info("Начата загрузка экзаменов из локальной БД");
-
-                using (var connection = new SQLiteConnection(GetLocalConnectionString()))
+                using (var conn = new SQLiteConnection(_localConnectionString))
+                using (var cmd = new SQLiteCommand("SELECT * FROM Exams", conn))
                 {
-                    connection.Open();
-                    string query = @"SELECT Id, Teacher1Id, Teacher2Id, SubjectId, GroupId, 
-                                           Classroom, Department, ExamDate, ExamTime, ExamType 
-                                    FROM Exams";
-
-                    using (var command = new SQLiteCommand(query, connection))
-                    using (var reader = command.ExecuteReader())
+                    conn.Open();
+                    using (var reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
                         {
@@ -174,14 +447,11 @@ namespace ExamScheduleApp.Utilities
                             {
                                 Id = SafeGetInt32(reader, "Id"),
                                 Teacher1Id = SafeGetInt32(reader, "Teacher1Id"),
-                                Teacher2Id = SafeGetNullableInt32(reader, "Teacher2Id"),
+                                Teacher2Id = SafeGetInt32(reader, "Teacher2Id"),
                                 SubjectId = SafeGetInt32(reader, "SubjectId"),
                                 GroupId = SafeGetInt32(reader, "GroupId"),
                                 Classroom = SafeGetString(reader, "Classroom"),
-                                DepartmentName = SafeGetString(reader, "Department"),
-                                ExamDate = SafeGetString(reader, "ExamDate"),
-                                ExamTime = SafeGetString(reader, "ExamTime"),
-                                ExamType = SafeGetString(reader, "ExamType")
+                                DepartmentName = SafeGetString(reader, "Department")
                             };
 
                             exam.Teacher1Name = GetTeacherName(exam.Teacher1Id);
@@ -193,16 +463,8 @@ namespace ExamScheduleApp.Utilities
                         }
                     }
                 }
-
-                Logger.Info($"Загружено {exams.Count} экзаменов из локальной БД");
-
             }
-            catch (Exception ex)
-            {
-                Logger.Error("Ошибка загрузки экзаменов", ex);
-                MessageBox.Show($"Ошибка загрузки экзаменов: {ex.Message}");
-                return new List<ExamSchedule>();
-            }
+            catch (Exception ex) { Logger.Error("GetExamSchedule", ex); }
             return exams;
         }
 
@@ -210,38 +472,26 @@ namespace ExamScheduleApp.Utilities
         {
             try
             {
-                using (var connection = new SQLiteConnection(GetLocalConnectionString()))
+                using (var conn = new SQLiteConnection(_localConnectionString))
+                using (var cmd = new SQLiteCommand(@"
+                    INSERT INTO Exams (Teacher1Id, Teacher2Id, SubjectId, GroupId, Classroom, Department)
+                    VALUES (@t1, @t2, @s, @g, @c, @d)", conn))
                 {
-                    connection.Open();
-                    string query = @"
-                        INSERT INTO Exams (Teacher1Id, Teacher2Id, SubjectId, GroupId, Classroom, 
-                                           Department, ExamDate, ExamTime, ExamType) 
-                        VALUES (@Teacher1Id, @Teacher2Id, @SubjectId, @GroupId, @Classroom, 
-                                @Department, @ExamDate, @ExamTime, @ExamType)";
-
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@Teacher1Id", exam.Teacher1Id);
-                        command.Parameters.AddWithValue("@Teacher2Id", exam.Teacher2Id.HasValue ? (object)exam.Teacher2Id.Value : DBNull.Value);
-                        command.Parameters.AddWithValue("@SubjectId", exam.SubjectId);
-                        command.Parameters.AddWithValue("@GroupId", exam.GroupId);
-                        command.Parameters.AddWithValue("@Classroom", exam.Classroom ?? "");
-                        command.Parameters.AddWithValue("@Department", exam.DepartmentName ?? "");
-                        command.Parameters.AddWithValue("@ExamDate", exam.ExamDate ?? "");
-                        command.Parameters.AddWithValue("@ExamTime", exam.ExamTime ?? "");
-                        command.Parameters.AddWithValue("@ExamType", exam.ExamType ?? "");
-
-                        command.ExecuteNonQuery();
-                    }
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@t1", exam.Teacher1Id);
+                    cmd.Parameters.AddWithValue("@t2", exam.Teacher2Id.HasValue ? (object)exam.Teacher2Id.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@s", exam.SubjectId);
+                    cmd.Parameters.AddWithValue("@g", exam.GroupId);
+                    cmd.Parameters.AddWithValue("@c", exam.Classroom ?? "");
+                    cmd.Parameters.AddWithValue("@d", exam.DepartmentName ?? "");
+                    cmd.ExecuteNonQuery();
                 }
-
-                Logger.Info($"Добавлен экзамен: {exam.SubjectName} | {exam.GroupName} | {exam.ExamDate}");
+                Logger.Info($"Добавлен экзамен: {exam.SubjectName} — {exam.GroupName}");
                 if (showInfo) MessageBox.Show("Экзамен успешно добавлен!");
-
             }
             catch (Exception ex)
             {
-                Logger.Error("Ошибка AddExam", ex);
+                Logger.Error("AddExam", ex);
                 MessageBox.Show($"Ошибка добавления экзамена: {ex.Message}");
             }
         }
@@ -250,39 +500,19 @@ namespace ExamScheduleApp.Utilities
         {
             try
             {
-                Logger.Warning($"Удаление экзамена ID: {examId}");
-
-                using (var connection = new SQLiteConnection(GetLocalConnectionString()))
+                using (var conn = new SQLiteConnection(_localConnectionString))
+                using (var cmd = new SQLiteCommand("DELETE FROM Exams WHERE Id = @Id", conn))
                 {
-                    connection.Open();
-                    string query = "DELETE FROM Exams WHERE Id = @Id";
-
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@Id", examId);
-                        int rowsDeleted = command.ExecuteNonQuery();
-
-                        if (showInfo)
-                        {
-                            if (rowsDeleted > 0)
-                            {
-                                Logger.Info($"Экзамен ID {examId} успешно удалён");
-                                MessageBox.Show("Экзамен успешно удален из базы данных");
-                            }
-
-                            else
-                            {
-                                Logger.Warning($"Экзамен ID {examId} не найден");
-                                MessageBox.Show("Экзамен не найден");
-                            }
-                        }
-                    }
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@Id", examId);
+                    cmd.ExecuteNonQuery();
                 }
+                Logger.Info($"Удалён экзамен ID: {examId}");
+                if (showInfo) MessageBox.Show("Экзамен удалён");
             }
             catch (Exception ex)
             {
-                Logger.Error($"Ошибка удаления экзамена ID {examId}", ex);
-                MessageBox.Show($"Ошибка удаления экзамена: {ex.Message}");
+                Logger.Error($"DeleteExam {examId}", ex);
             }
         }
 
@@ -290,533 +520,90 @@ namespace ExamScheduleApp.Utilities
         {
             try
             {
-                Logger.Warning("Запрошена полная очистка всех экзаменов в локальной БД");
-
-                using (var connection = new SQLiteConnection(GetLocalConnectionString()))
+                using (var conn = new SQLiteConnection(_localConnectionString))
+                using (var cmd = new SQLiteCommand("DELETE FROM Exams", conn))
                 {
-                    connection.Open();
-                    string query = "DELETE FROM Exams";
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.ExecuteNonQuery();
-                        Logger.Info("Все экзамены из локальной БД были успешно удалены");
-                    }
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+                Logger.Warning("Выполнена полная очистка расписания");
+            }
+            catch (Exception ex) { Logger.Error("ClearAllExams", ex); }
+        }
+
+        // ====================== ВСПОМОГАТЕЛЬНЫЕ ======================
+        private string GetTeacherName(int id) => GetNameFromServer("Teachers", "Name", id);
+        private string GetSubjectName(int id) => GetNameFromServer("Disciplines", "ShortName9", id);
+        private string GetGroupName(int id) => GetNameFromServer("Groups", "Name", id);
+
+        private string GetNameFromServer(string table, string column, int id)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_serverConnectionString))
+                using (var cmd = new SqlCommand($"SELECT {column} FROM {table} WHERE Id = @id", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@id", id);
+                    return cmd.ExecuteScalar()?.ToString() ?? "";
                 }
             }
-            catch (Exception ex)
-            {
-                Logger.Error("Ошибка в очистке всего списка экзаменов", ex);
-                MessageBox.Show($"Ошибка очистки экзаменов: {ex.Message}");
-            }
-        }
-        #endregion
-
-        #region ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
-        private string SafeGetString(SQLiteDataReader reader, string columnName)
-        {
-            try
-            {
-                int columnIndex = reader.GetOrdinal(columnName);
-                if (!reader.IsDBNull(columnIndex))
-                    return reader.GetString(columnIndex);
-                return string.Empty;
-            }
-            catch { return string.Empty; }
+            catch { return ""; }
         }
 
-        private int SafeGetInt32(SQLiteDataReader reader, string columnName)
+        private string SafeGetString(SQLiteDataReader r, string col)
         {
-            try
-            {
-                int columnIndex = reader.GetOrdinal(columnName);
-                if (!reader.IsDBNull(columnIndex))
-                    return reader.GetInt32(columnIndex);
-                return 0;
-            }
+            try { int i = r.GetOrdinal(col); return r.IsDBNull(i) ? "" : r.GetString(i); }
+            catch { return ""; }
+        }
+
+        private int SafeGetInt32(SQLiteDataReader r, string col)
+        {
+            try { int i = r.GetOrdinal(col); return r.IsDBNull(i) ? 0 : r.GetInt32(i); }
             catch { return 0; }
         }
+        // ====================== СТАРЫЕ МЕТОДЫ ДЛЯ СОВМЕСТИМОСТИ ======================
 
-        private int? SafeGetNullableInt32(SQLiteDataReader reader, string columnName)
+        /// <summary>
+        /// Старый метод для совместимости с MainWindow и DevWindow
+        /// </summary>
+        public string GetConnectionString()
         {
-            try
-            {
-                int columnIndex = reader.GetOrdinal(columnName);
-                if (!reader.IsDBNull(columnIndex))
-                    return reader.GetInt32(columnIndex);
-                return null;
-            }
-            catch { return null; }
+            return _serverConnectionString;
         }
 
-        private string GetTeacherName(int teacherId)
+        /// <summary>
+        /// Старый метод — теперь проверяет SQL Server
+        /// </summary>
+        public void CheckDatabaseStructure()
         {
-            try
-            {
-                using (var connection = new SQLiteConnection(GetConnectionString()))
-                {
-                    connection.Open();
-                    string query = "SELECT name FROM Teachers WHERE id = @id";
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@id", teacherId);
-                        return command.ExecuteScalar()?.ToString() ?? "";
-                    }
-                }
-            }
-            catch { return ""; }
+            CheckServerConnection();
         }
 
-        private string GetSubjectName(int subjectId)
-        {
-            try
-            {
-                using (var connection = new SQLiteConnection(GetConnectionString()))
-                {
-                    connection.Open();
-                    string query = "SELECT shortName9 FROM Disciplines WHERE id = @id";
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@id", subjectId);
-                        return command.ExecuteScalar()?.ToString() ?? "";
-                    }
-                }
-            }
-            catch { return ""; }
-        }
-
-        private string GetGroupName(int groupId)
-        {
-            try
-            {
-                using (var connection = new SQLiteConnection(GetConnectionString()))
-                {
-                    connection.Open();
-                    string query = "SELECT name FROM Groups WHERE id = @id";
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@id", groupId);
-                        return command.ExecuteScalar()?.ToString() ?? "";
-                    }
-                }
-            }
-            catch { return ""; }
-        }
-        #endregion
-
-        #region МЕТОДЫ СПРАВОЧНИКОВ
-        public List<Teacher> GetTeachers()
-        {
-            var teachers = new List<Teacher>();
-            try
-            {
-                Logger.Info("Загрузка списка преподавателей...");
-
-                using (var connection = new SQLiteConnection(GetConnectionString()))
-                {
-                    connection.Open();
-                    string query = "SELECT id, name, classroom, academicBuilding FROM Teachers ORDER BY name";
-
-                    using (var command = new SQLiteCommand(query, connection))
-                    using (var reader = command.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            teachers.Add(new Teacher
-                            {
-                                Id = SafeGetInt32(reader, "id"),
-                                Name = SafeGetString(reader, "name"),
-                                Classroom = SafeGetString(reader, "classroom"),
-                                AcademicBuilding = SafeGetInt32(reader, "academicBuilding")
-                            });
-                        }
-                    }
-                }
-
-                Logger.Info($"Успешно загружено {teachers.Count} преподавателей");
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Ошибка загрузки преподавателей", ex);
-                MessageBox.Show($"Ошибка загрузки преподавателей: {ex.Message}");
-            }
-            return teachers;
-        }
-
-        public List<Subject> GetSubjects()
-        {
-            var subjects = new List<Subject>();
-            try
-            {
-                Logger.Info("Загрузка списка дисциплин...");
-
-                using (var connection = new SQLiteConnection(GetConnectionString()))
-                {
-                    connection.Open();
-                    string query = "SELECT id, fullname, shortName12, shortName9, shortName5 FROM Disciplines ORDER BY fullname";
-
-                    using (var command = new SQLiteCommand(query, connection))
-                    using (var reader = command.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            subjects.Add(new Subject
-                            {
-                                Id = SafeGetInt32(reader, "id"),
-                                FullName = SafeGetString(reader, "fullname"),
-                                ShortName12 = SafeGetString(reader, "shortName12"),
-                                ShortName9 = SafeGetString(reader, "shortName9"),
-                                ShortName5 = SafeGetString(reader, "shortName5")
-                            });
-                        }
-                    }
-                }
-
-                Logger.Info($"Успешно загружено {subjects.Count} дисциплин");
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Ошибка загрузки дисциплин", ex);
-                MessageBox.Show($"Ошибка загрузки дисциплин: {ex.Message}");
-            }
-            return subjects;
-        }
-
-        public List<Group> GetGroups()
-        {
-            var groups = new List<Group>();
-            try
-            {
-                Logger.Info("Загрузка списка групп...");
-                using (var connection = new SQLiteConnection(GetConnectionString()))
-                {
-                    connection.Open();
-                    string query = "SELECT id, name, department FROM Groups ORDER BY name";
-
-                    using (var command = new SQLiteCommand(query, connection))
-                    using (var reader = command.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            groups.Add(new Group
-                            {
-                                Id = SafeGetInt32(reader, "id"),
-                                Name = SafeGetString(reader, "name"),
-                                Department = SafeGetString(reader, "department")
-                            });
-                        }
-                    }
-                }
-                Logger.Info($"Успешно загружено {groups.Count} групп");
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Ошибка загрузки групп", ex);
-                MessageBox.Show($"Ошибка загрузки групп: {ex.Message}");
-            }
-            return groups;
-        }
-
-        public void AddTeacher(Teacher teacher)
-        {
-            try
-            {
-                Logger.Info($"Добавление преподавателя: {teacher.Name}");
-                string query = "INSERT INTO Teachers (name, classroom, academicBuilding) VALUES (@Name, @Classroom, @AcademicBuilding)";
-                using (var connection = new SQLiteConnection(GetConnectionString()))
-                {
-                    connection.Open();
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@Name", teacher.Name);
-                        command.Parameters.AddWithValue("@Classroom", teacher.Classroom);
-                        command.Parameters.AddWithValue("@AcademicBuilding", teacher.AcademicBuilding);
-                        command.ExecuteNonQuery();
-                    }
-                }
-                Logger.Info($"Преподаватель {teacher.Name} успешно добавлен");
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Ошибка добавления преподавателя {teacher?.Name}", ex);
-                MessageBox.Show($"Ошибка добавления преподавателя: {ex.Message}");
-            }
-        }
-
-        public void AddSubject(Subject subject)
-        {
-            try
-            {
-                Logger.Info($"Добавление дисциплины: {subject.ShortName9}");
-                using (var connection = new SQLiteConnection(GetConnectionString()))
-                {
-                    connection.Open();
-                    string query = "INSERT INTO Disciplines (fullname, shortName12, shortName9, shortName5) VALUES (@FullName, @ShortName12, @ShortName9, @ShortName5)";
-
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        string shortName9 = subject.ShortName9 ?? "";
-                        command.Parameters.AddWithValue("@FullName", shortName9);
-                        command.Parameters.AddWithValue("@ShortName12", shortName9.Length > 12 ? shortName9.Substring(0, 12) : shortName9);
-                        command.Parameters.AddWithValue("@ShortName9", shortName9);
-                        command.Parameters.AddWithValue("@ShortName5", shortName9.Length > 5 ? shortName9.Substring(0, 5) : shortName9);
-
-                        command.ExecuteNonQuery();
-                    }
-                }
-                Logger.Info($"Дисциплина '{subject.ShortName9}' успешно добавлена");
-                MessageBox.Show($"Дисциплина '{subject.ShortName9}' успешно добавлена!");
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Ошибка добавления дисциплины {subject?.ShortName9}", ex);
-                MessageBox.Show($"Ошибка добавления дисциплины: {ex.Message}");
-            }
-        }
-
-        public void AddGroup(Group group)
-        {
-            try
-            {
-                Logger.Info($"Добавление группы: {group.Name}");
-                string query = "INSERT INTO Groups (name, department) VALUES (@Name, @Department)";
-                using (var connection = new SQLiteConnection(GetConnectionString()))
-                {
-                    connection.Open();
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@Name", group.Name);
-                        command.Parameters.AddWithValue("@Department", group.Department ?? "");
-                        command.ExecuteNonQuery();
-                    }
-                }
-                Logger.Info($"Группа {group.Name} успешно добавлена");
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Ошибка добавления группы {group?.Name}", ex);
-                MessageBox.Show($"Ошибка добавления группы: {ex.Message}");
-            }
-        }
-
-        public bool TeacherExists(string name)
-        {
-            string query = "SELECT COUNT(*) FROM Teachers WHERE name = @Name";
-            using (var connection = new SQLiteConnection(GetConnectionString()))
-            {
-                connection.Open();
-                using (var command = new SQLiteCommand(query, connection))
-                {
-                    command.Parameters.AddWithValue("@Name", name);
-                    var count = Convert.ToInt32(command.ExecuteScalar());
-                    return count > 0;
-                }
-            }
-        }
-
-        public bool SubjectExists(string shortName9)
-        {
-            string query = "SELECT COUNT(*) FROM Disciplines WHERE shortName9 = @ShortName9";
-            using (var connection = new SQLiteConnection(GetConnectionString()))
-            {
-                connection.Open();
-                using (var command = new SQLiteCommand(query, connection))
-                {
-                    command.Parameters.AddWithValue("@ShortName9", shortName9);
-                    var count = Convert.ToInt32(command.ExecuteScalar());
-                    return count > 0;
-                }
-            }
-        }
-
-        public bool GroupExists(string name)
-        {
-            string query = "SELECT COUNT(*) FROM Groups WHERE name = @Name";
-            using (var connection = new SQLiteConnection(GetConnectionString()))
-            {
-                connection.Open();
-                using (var command = new SQLiteCommand(query, connection))
-                {
-                    command.Parameters.AddWithValue("@Name", name);
-                    var count = Convert.ToInt32(command.ExecuteScalar());
-                    return count > 0;
-                }
-            }
-        }
-
-        public void UpdateTeacher(Teacher teacher)
-        {
-            try
-            {
-                Logger.Info($"Обновление преподавателя: {teacher.Name} (ID: {teacher.Id})");
-                using (var connection = new SQLiteConnection(GetConnectionString()))
-                {
-                    connection.Open();
-                    string query = "UPDATE Teachers SET name = @Name, classroom = @Classroom, academicBuilding = @AcademicBuilding WHERE id = @Id";
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@Name", teacher.Name);
-                        command.Parameters.AddWithValue("@Classroom", teacher.Classroom);
-                        command.Parameters.AddWithValue("@AcademicBuilding", teacher.AcademicBuilding);
-                        command.Parameters.AddWithValue("@Id", teacher.Id);
-                        command.ExecuteNonQuery();
-                    }
-                }
-                Logger.Info($"Преподаватель {teacher.Name} успешно обновлён");
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Ошибка обновления преподавателя {teacher?.Name}", ex);
-                MessageBox.Show($"Ошибка обновления преподавателя: {ex.Message}");
-            }
-        }
-
-        public void DeleteTeacher(int teacherId)
-        {
-            try
-            {
-                Logger.Warning($"Попытка удаления преподавателя ID: {teacherId}");
-                using (var connection = new SQLiteConnection(GetConnectionString()))
-                {
-                    connection.Open();
-                    string query = "DELETE FROM Teachers WHERE id = @Id";
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@Id", teacherId);
-                        command.ExecuteNonQuery();
-                    }
-                }
-                Logger.Info($"Преподаватель ID {teacherId} успешно удалён");
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Ошибка удаления преподавателя ID {teacherId}", ex);
-                MessageBox.Show($"Ошибка удаления преподавателя: {ex.Message}");
-            }
-        }
-
-        public void UpdateSubject(Subject subject)
-        {
-            try
-            {
-                Logger.Info($"Обновление дисциплины: {subject.ShortName9} (ID: {subject.Id})");
-                using (var connection = new SQLiteConnection(GetConnectionString()))
-                {
-                    connection.Open();
-                    string query = "UPDATE Disciplines SET fullname = @FullName, shortName12 = @ShortName12, shortName9 = @ShortName9, shortName5 = @ShortName5 WHERE id = @Id";
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@FullName", subject.FullName);
-                        command.Parameters.AddWithValue("@ShortName12", subject.ShortName12);
-                        command.Parameters.AddWithValue("@ShortName9", subject.ShortName9);
-                        command.Parameters.AddWithValue("@ShortName5", subject.ShortName5);
-                        command.Parameters.AddWithValue("@Id", subject.Id);
-                        command.ExecuteNonQuery();
-                    }
-                }
-                Logger.Info($"Дисциплина {subject.ShortName9} успешно обновлена");
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Ошибка обновления дисциплины {subject?.ShortName9}", ex);
-                MessageBox.Show($"Ошибка обновления дисциплины: {ex.Message}");
-            }
-        }
-
-        public void DeleteSubject(int subjectId)
-        {
-            try
-            {
-                Logger.Warning($"Попытка удаления дисциплины ID: {subjectId}");
-                using (var connection = new SQLiteConnection(GetConnectionString()))
-                {
-                    connection.Open();
-                    string query = "DELETE FROM Disciplines WHERE id = @Id";
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@Id", subjectId);
-                        command.ExecuteNonQuery();
-                    }
-                }
-                Logger.Info($"Дисциплина ID {subjectId} успешно удалена");
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Ошибка удаления дисциплины ID {subjectId}", ex);
-                MessageBox.Show($"Ошибка удаления дисциплины: {ex.Message}");
-            }
-        }
-
-        public void UpdateGroup(Group group)
-        {
-            try
-            {
-                Logger.Info($"Обновление группы: {group.Name} (ID: {group.Id})");
-                using (var connection = new SQLiteConnection(GetConnectionString()))
-                {
-                    connection.Open();
-                    string query = "UPDATE Groups SET name = @Name, department = @Department WHERE id = @Id";
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@Name", group.Name);
-                        command.Parameters.AddWithValue("@Department", group.Department);
-                        command.Parameters.AddWithValue("@Id", group.Id);
-                        command.ExecuteNonQuery();
-                    }
-                }
-                Logger.Info($"Группа {group.Name} успешно обновлена");
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Ошибка обновления группы {group?.Name}", ex);
-                MessageBox.Show($"Ошибка обновления группы: {ex.Message}");
-            }
-        }
-
-        public void DeleteGroup(int groupId)
-        {
-            try
-            {
-                Logger.Warning($"Попытка удаления группы ID: {groupId}");
-                using (var connection = new SQLiteConnection(GetConnectionString()))
-                {
-                    connection.Open();
-                    string query = "DELETE FROM Groups WHERE id = @Id";
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@Id", groupId);
-                        command.ExecuteNonQuery();
-                    }
-                }
-                Logger.Info($"Группа ID {groupId} успешно удалена");
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Ошибка удаления группы ID {groupId}", ex);
-                MessageBox.Show($"Ошибка удаления группы: {ex.Message}");
-            }
-        }
-
+        /// <summary>
+        /// Очистка проблемных данных (справочники)
+        /// </summary>
         public void CleanProblematicData()
         {
             try
             {
-                Logger.Info("Начата очистка проблемных данных в справочниках");
-                using (var connection = new SQLiteConnection(GetConnectionString()))
+                Logger.Info("Выполняется очистка проблемных данных в справочниках");
+
+                using (var conn = new SqlConnection(_serverConnectionString))
                 {
-                    connection.Open();
-                    string[] cleanupQueries = {
-                        "DELETE FROM Teachers WHERE name IS NULL OR classroom IS NULL",
-                        "DELETE FROM Groups WHERE name IS NULL",
-                        "DELETE FROM Disciplines WHERE shortName9 IS NULL"
+                    conn.Open();
+
+                    string[] queries = {
+                        "DELETE FROM Teachers WHERE Name IS NULL OR Name = ''",
+                        "DELETE FROM Groups WHERE Name IS NULL OR Name = ''",
+                        "DELETE FROM Disciplines WHERE ShortName9 IS NULL OR ShortName9 = ''"
                     };
 
-                    foreach (string query in cleanupQueries)
+                    foreach (string q in queries)
                     {
-                        using (var command = new SQLiteCommand(query, connection))
+                        using (var cmd = new SqlCommand(q, conn))
                         {
-                            int affected = command.ExecuteNonQuery();
-                            if (affected > 0)
-                                Logger.Info($"Удалено {affected} проблемных записей в справочниках");
+                            cmd.ExecuteNonQuery();
                         }
                     }
                 }
@@ -824,10 +611,8 @@ namespace ExamScheduleApp.Utilities
             }
             catch (Exception ex)
             {
-                Logger.Error("Ошибка очистки проблемных данных", ex);
-                MessageBox.Show($"Ошибка очистки данных: {ex.Message}");
+                Logger.Error("CleanProblematicData", ex);
             }
         }
-        #endregion
     }
 }
