@@ -28,6 +28,10 @@
                     Click="AddButtonClick"
                     Margin="20"
                     Style="{StaticResource ModernButtonStyle}"/>
+            <Button Content="Импорт из Excel" 
+                    Click="ImportFromExcel_Click" 
+                    Margin="20"                    
+                    Style="{StaticResource ModernButtonStyle}"/>
         </StackPanel>
     </Grid>
 </Window>

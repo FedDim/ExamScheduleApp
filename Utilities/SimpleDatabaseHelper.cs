@@ -90,21 +90,23 @@ namespace ExamScheduleApp.Utilities
                 {
                     conn.Open();
                     string sql = @"
-                        CREATE TABLE IF NOT EXISTS Exams (
-                            Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            Teacher1Id INTEGER NOT NULL,
-                            Teacher2Id INTEGER,
-                            SubjectId INTEGER NOT NULL,
-                            GroupId INTEGER NOT NULL,
-                            Classroom TEXT NOT NULL,
-                            Department TEXT,
-                            CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP
-                        );";
-
+                CREATE TABLE IF NOT EXISTS LocalExams (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Teacher1Id INTEGER,
+                    Teacher2Id INTEGER,
+                    SubjectId INTEGER,
+                    GroupId INTEGER,
+                    ExamDate TEXT,
+                    ExamTime TEXT,
+                    Classroom TEXT,
+                    ExamType TEXT
+                )";
                     using (var cmd = new SQLiteCommand(sql, conn))
+                    {
                         cmd.ExecuteNonQuery();
+                    }
                 }
-                Logger.Info("Структура локальной БД проверена");
+                Logger.Info("Структура локальной БД проверена (LocalExams)");
             }
             catch (Exception ex)
             {
@@ -264,7 +266,7 @@ namespace ExamScheduleApp.Utilities
             }
         }
 
-        // ====================== CRUD ДЛЯ СПРАВОЧНИКОВ ======================
+        #region ====================== CRUD ДЛЯ СПРАВОЧНИКОВ ======================
 
         // ==================== TEACHERS ====================
         public void AddTeacher(Teacher teacher)
@@ -428,6 +430,7 @@ namespace ExamScheduleApp.Utilities
             }
             catch (Exception ex) { Logger.Error($"DeleteGroup {groupId}", ex); }
         }
+        #endregion
 
         // ====================== РАСПИСАНИЕ (SQLite) ======================
         public List<ExamSchedule> GetExamSchedule()
@@ -472,27 +475,36 @@ namespace ExamScheduleApp.Utilities
         {
             try
             {
-                using (var conn = new SQLiteConnection(_localConnectionString))
-                using (var cmd = new SQLiteCommand(@"
-                    INSERT INTO Exams (Teacher1Id, Teacher2Id, SubjectId, GroupId, Classroom, Department)
-                    VALUES (@t1, @t2, @s, @g, @c, @d)", conn))
+                using (var connection = new SQLiteConnection(GetConnectionString()))
                 {
-                    conn.Open();
-                    cmd.Parameters.AddWithValue("@t1", exam.Teacher1Id);
-                    cmd.Parameters.AddWithValue("@t2", exam.Teacher2Id.HasValue ? (object)exam.Teacher2Id.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@s", exam.SubjectId);
-                    cmd.Parameters.AddWithValue("@g", exam.GroupId);
-                    cmd.Parameters.AddWithValue("@c", exam.Classroom ?? "");
-                    cmd.Parameters.AddWithValue("@d", exam.DepartmentName ?? "");
-                    cmd.ExecuteNonQuery();
+                    connection.Open();
+                    string query = @"
+                                    INSERT INTO Exams (Teacher1Id, Teacher2Id, SubjectId, GroupId, 
+                                                     Classroom, Department, ExamDate, ExamTime, ExamType) 
+                                    VALUES (@Teacher1Id, @Teacher2Id, @SubjectId, @GroupId, 
+                                            @Classroom, @Department, @ExamDate, @ExamTime, @ExamType)";
+                    using (var command = new SQLiteCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@Teacher1Id", exam.Teacher1Id);
+                    command.Parameters.AddWithValue("@Teacher2Id", exam.Teacher2Id);
+                    command.Parameters.AddWithValue("@SubjectId", exam.SubjectId);
+                    command.Parameters.AddWithValue("@GroupId", exam.GroupId);
+                    command.Parameters.AddWithValue("@Classroom", exam.Classroom);
+                    command.Parameters.AddWithValue("@Department", exam.DepartmentName);
+                    command.Parameters.AddWithValue("@ExamDate", exam.ExamDate);
+                    command.Parameters.AddWithValue("@ExamTime", exam.ExamTime);
+                    command.Parameters.AddWithValue("@ExamType", exam.ExamType);
+
+                    command.ExecuteNonQuery();
                 }
-                Logger.Info($"Добавлен экзамен: {exam.SubjectName} — {exam.GroupName}");
-                if (showInfo) MessageBox.Show("Экзамен успешно добавлен!");
+            }
+                Logger.Info($"Экзамен сохранен: Дата {exam.ExamDate}, Время {exam.ExamTime}");
+                if (showInfo) MessageBox.Show("Данные успешно сохранены!");
             }
             catch (Exception ex)
             {
-                Logger.Error("AddExam", ex);
-                MessageBox.Show($"Ошибка добавления экзамена: {ex.Message}");
+                Logger.Error("Ошибка в AddExam", ex);
+                MessageBox.Show($"Ошибка сохранения: {ex.Message}");
             }
         }
 

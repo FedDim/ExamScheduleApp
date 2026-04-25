@@ -1,4 +1,5 @@
-﻿using ExamScheduleApp.Model;
+﻿using ClosedXML.Excel;
+using ExamScheduleApp.Model;
 using ExamScheduleApp.Utilities;
 using System;
 using System.Text.RegularExpressions;
@@ -153,6 +154,57 @@ namespace ExamScheduleApp
             {
                 MessageBox.Show($"Ошибка при добавлении данных: {ex.Message}", "Ошибка",
                               MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        // ====================== ИМПОРТ ИЗ EXCEL ======================
+
+        private void ImportFromExcel_Click(object sender, RoutedEventArgs e)
+        {
+            var openFileDialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "Excel файлы (*.xlsx)|*.xlsx|Все файлы (*.*)|*.*",
+                Title = $"Импорт {GetDataTypeName()}"
+            };
+
+            if (openFileDialog.ShowDialog() != true)
+                return;
+
+            try
+            {
+                var importer = new DataImporter(new SimpleDatabaseHelper());
+                var result = importer.Import(_dataType, openFileDialog.FileName);
+
+                MessageBox.Show(result.GetSummary(),
+                                $"Результат импорта {GetDataTypeName()}",
+                                MessageBoxButton.OK,
+                                result.ErrorsCount > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
+
+                // Уведомляем главное окно об обновлении данных
+                DataAdded?.Invoke(_dataType);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при импорте:\n{ex.Message}", "Ошибка импорта",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private string GetDataTypeName()
+        {
+            switch (_dataType)
+            {
+                case DataType.TEACHER:
+                    return "преподавателей";
+
+                case DataType.GROUP:
+                    return "групп";
+
+                case DataType.SUBJECT:
+                    return "дисциплин";
+
+                default:
+                    return "данных";
             }
         }
     }
