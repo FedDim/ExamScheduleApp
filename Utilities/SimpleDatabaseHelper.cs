@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Data;
 using System.Data.SqlClient;
 using System.Data.SQLite;
 using System.IO;
@@ -26,6 +25,8 @@ namespace ExamScheduleApp.Utilities
                 _localConnectionString = $"Data Source={localPath};Version=3;Journal Mode=Delete;Pooling=False;BusyTimeout=30000;";
 
                 Logger.Info("SimpleDatabaseHelper: Строки подключения загружены.");
+                // При создании хелпера сразу проверяем/создаём структуру локальной БД
+                CheckLocalDatabaseStructure();
             }
             catch (Exception ex)
             {
@@ -42,6 +43,16 @@ namespace ExamScheduleApp.Utilities
             return Path.Combine(dataFolder, "LocalExams.db");
         }
 
+        /// <summary>
+        /// Возвращает строку подключения к SQLite (локальная БД)
+        /// </summary>
+        public string GetLocalConnectionString() => _localConnectionString;
+
+        /// <summary>
+        /// Возвращает строку подключения к SQL Server (справочники)
+        /// </summary>
+        public string GetServerConnectionString() => _serverConnectionString;
+
         // ====================== ИНИЦИАЛИЗАЦИЯ ======================
         public bool CheckServerConnection()
         {
@@ -56,7 +67,6 @@ namespace ExamScheduleApp.Utilities
                 }
                 catch (SqlException ex)
                 {
-                    // Детальный разбор ошибок SQL
                     string errorMsg = "Ошибка подключения к SQL Server:\n";
                     switch (ex.Number)
                     {
@@ -82,6 +92,9 @@ namespace ExamScheduleApp.Utilities
             }
         }
 
+        /// <summary>
+        /// Создаёт таблицу Exams в SQLite, если её нет.
+        /// </summary>
         public void CheckLocalDatabaseStructure()
         {
             try
@@ -90,23 +103,24 @@ namespace ExamScheduleApp.Utilities
                 {
                     conn.Open();
                     string sql = @"
-                CREATE TABLE IF NOT EXISTS LocalExams (
-                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Teacher1Id INTEGER,
-                    Teacher2Id INTEGER,
-                    SubjectId INTEGER,
-                    GroupId INTEGER,
-                    ExamDate TEXT,
-                    ExamTime TEXT,
-                    Classroom TEXT,
-                    ExamType TEXT
-                )";
+                        CREATE TABLE IF NOT EXISTS Exams (
+                            Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            Teacher1Id INTEGER,
+                            Teacher2Id INTEGER,
+                            SubjectId INTEGER,
+                            GroupId INTEGER,
+                            ExamDate TEXT,
+                            ExamTime TEXT,
+                            Classroom TEXT,
+                            ExamType TEXT,
+                            Department TEXT
+                        )";
                     using (var cmd = new SQLiteCommand(sql, conn))
                     {
                         cmd.ExecuteNonQuery();
                     }
                 }
-                Logger.Info("Структура локальной БД проверена (LocalExams)");
+                Logger.Info("Структура локальной БД проверена (таблица Exams)");
             }
             catch (Exception ex)
             {
@@ -266,9 +280,7 @@ namespace ExamScheduleApp.Utilities
             }
         }
 
-        #region ====================== CRUD ДЛЯ СПРАВОЧНИКОВ ======================
-
-        // ==================== TEACHERS ====================
+        #region CRUD ДЛЯ СПРАВОЧНИКОВ (SQL Server)
         public void AddTeacher(Teacher teacher)
         {
             try
@@ -322,7 +334,6 @@ namespace ExamScheduleApp.Utilities
             catch (Exception ex) { Logger.Error($"DeleteTeacher {teacherId}", ex); }
         }
 
-        // ==================== SUBJECTS ====================
         public void AddSubject(Subject subject)
         {
             try
@@ -379,7 +390,6 @@ namespace ExamScheduleApp.Utilities
             catch (Exception ex) { Logger.Error($"DeleteSubject {subjectId}", ex); }
         }
 
-        // ==================== GROUPS ====================
         public void AddGroup(Group group)
         {
             try
@@ -454,14 +464,16 @@ namespace ExamScheduleApp.Utilities
                                 SubjectId = SafeGetInt32(reader, "SubjectId"),
                                 GroupId = SafeGetInt32(reader, "GroupId"),
                                 Classroom = SafeGetString(reader, "Classroom"),
-                                DepartmentName = SafeGetString(reader, "Department")
+                                DepartmentName = SafeGetString(reader, "Department"),
+                                ExamDate = SafeGetString(reader, "ExamDate"),
+                                ExamTime = SafeGetString(reader, "ExamTime"),
+                                ExamType = SafeGetString(reader, "ExamType")
                             };
-
+                            // Подгрузка имён из SQL Server
                             exam.Teacher1Name = GetTeacherName(exam.Teacher1Id);
-                            exam.Teacher2Name = exam.Teacher2Id.HasValue ? GetTeacherName(exam.Teacher2Id.Value) : null;
+                            exam.Teacher2Name = exam.Teacher2Id.HasValue && exam.Teacher2Id.Value > 0 ? GetTeacherName(exam.Teacher2Id.Value) : null;
                             exam.SubjectName = GetSubjectName(exam.SubjectId);
                             exam.GroupName = GetGroupName(exam.GroupId);
-
                             exams.Add(exam);
                         }
                     }
@@ -475,30 +487,29 @@ namespace ExamScheduleApp.Utilities
         {
             try
             {
-                using (var connection = new SQLiteConnection(GetConnectionString()))
+                using (var connection = new SQLiteConnection(_localConnectionString))
                 {
                     connection.Open();
                     string query = @"
-                                    INSERT INTO Exams (Teacher1Id, Teacher2Id, SubjectId, GroupId, 
-                                                     Classroom, Department, ExamDate, ExamTime, ExamType) 
-                                    VALUES (@Teacher1Id, @Teacher2Id, @SubjectId, @GroupId, 
-                                            @Classroom, @Department, @ExamDate, @ExamTime, @ExamType)";
+                        INSERT INTO Exams (Teacher1Id, Teacher2Id, SubjectId, GroupId, 
+                                         Classroom, Department, ExamDate, ExamTime, ExamType) 
+                        VALUES (@Teacher1Id, @Teacher2Id, @SubjectId, @GroupId, 
+                                @Classroom, @Department, @ExamDate, @ExamTime, @ExamType)";
                     using (var command = new SQLiteCommand(query, connection))
-                {
-                    command.Parameters.AddWithValue("@Teacher1Id", exam.Teacher1Id);
-                    command.Parameters.AddWithValue("@Teacher2Id", exam.Teacher2Id);
-                    command.Parameters.AddWithValue("@SubjectId", exam.SubjectId);
-                    command.Parameters.AddWithValue("@GroupId", exam.GroupId);
-                    command.Parameters.AddWithValue("@Classroom", exam.Classroom);
-                    command.Parameters.AddWithValue("@Department", exam.DepartmentName);
-                    command.Parameters.AddWithValue("@ExamDate", exam.ExamDate);
-                    command.Parameters.AddWithValue("@ExamTime", exam.ExamTime);
-                    command.Parameters.AddWithValue("@ExamType", exam.ExamType);
-
-                    command.ExecuteNonQuery();
+                    {
+                        command.Parameters.AddWithValue("@Teacher1Id", exam.Teacher1Id);
+                        command.Parameters.AddWithValue("@Teacher2Id", exam.Teacher2Id ?? (object)DBNull.Value);
+                        command.Parameters.AddWithValue("@SubjectId", exam.SubjectId);
+                        command.Parameters.AddWithValue("@GroupId", exam.GroupId);
+                        command.Parameters.AddWithValue("@Classroom", exam.Classroom ?? "");
+                        command.Parameters.AddWithValue("@Department", exam.DepartmentName ?? "");
+                        command.Parameters.AddWithValue("@ExamDate", exam.ExamDate ?? "");
+                        command.Parameters.AddWithValue("@ExamTime", exam.ExamTime ?? "");
+                        command.Parameters.AddWithValue("@ExamType", exam.ExamType ?? "");
+                        command.ExecuteNonQuery();
+                    }
                 }
-            }
-                Logger.Info($"Экзамен сохранен: Дата {exam.ExamDate}, Время {exam.ExamTime}");
+                Logger.Info($"Экзамен сохранён: Дата {exam.ExamDate}, Время {exam.ExamTime}");
                 if (showInfo) MessageBox.Show("Данные успешно сохранены!");
             }
             catch (Exception ex)
@@ -550,6 +561,7 @@ namespace ExamScheduleApp.Utilities
 
         private string GetNameFromServer(string table, string column, int id)
         {
+            if (id <= 0) return "";
             try
             {
                 using (var conn = new SqlConnection(_serverConnectionString))
@@ -574,49 +586,38 @@ namespace ExamScheduleApp.Utilities
             try { int i = r.GetOrdinal(col); return r.IsDBNull(i) ? 0 : r.GetInt32(i); }
             catch { return 0; }
         }
-        // ====================== СТАРЫЕ МЕТОДЫ ДЛЯ СОВМЕСТИМОСТИ ======================
 
+        // ====================== МЕТОДЫ ДЛЯ СОВМЕСТИМОСТИ ======================
         /// <summary>
-        /// Старый метод для совместимости с MainWindow и DevWindow
+        /// Устаревший метод. Используйте GetServerConnectionString()
         /// </summary>
-        public string GetConnectionString()
-        {
-            return _serverConnectionString;
-        }
+        public string GetConnectionString() => _serverConnectionString;
 
         /// <summary>
-        /// Старый метод — теперь проверяет SQL Server
+        /// Устаревший метод. Используйте CheckServerConnection()
         /// </summary>
         public void CheckDatabaseStructure()
         {
             CheckServerConnection();
         }
 
-        /// <summary>
-        /// Очистка проблемных данных (справочники)
-        /// </summary>
         public void CleanProblematicData()
         {
             try
             {
                 Logger.Info("Выполняется очистка проблемных данных в справочниках");
-
                 using (var conn = new SqlConnection(_serverConnectionString))
                 {
                     conn.Open();
-
                     string[] queries = {
                         "DELETE FROM Teachers WHERE Name IS NULL OR Name = ''",
                         "DELETE FROM Groups WHERE Name IS NULL OR Name = ''",
                         "DELETE FROM Disciplines WHERE ShortName9 IS NULL OR ShortName9 = ''"
                     };
-
                     foreach (string q in queries)
                     {
                         using (var cmd = new SqlCommand(q, conn))
-                        {
                             cmd.ExecuteNonQuery();
-                        }
                     }
                 }
                 Logger.Info("Очистка проблемных данных завершена");

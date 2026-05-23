@@ -131,11 +131,10 @@ namespace ExamScheduleApp.View
         {
             try
             {
-                using (var connection = new SQLiteConnection(_dbHelper.GetConnectionString()))
+                using (var connection = new SQLiteConnection(_dbHelper.GetLocalConnectionString()))
                 {
                     connection.Open();
                     string query = "SELECT seq FROM sqlite_sequence WHERE name='Exams'";
-
                     using (var command = new SQLiteCommand(query, connection))
                     {
                         var result = command.ExecuteScalar();
