@@ -55,7 +55,7 @@
                       SelectionUnit="FullRow"
                       IsTabStop="True"
                       AutoGenerateColumns="False"
-                      IsReadOnly="True"
+                      IsReadOnly="False"
                       Margin="10"
                       SelectionChanged="ExamsDataGrid_SelectionChanged">
 

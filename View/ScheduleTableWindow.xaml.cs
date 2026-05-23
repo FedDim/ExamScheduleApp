@@ -1,10 +1,12 @@
-﻿using ExamScheduleApp.Model;
+﻿using ClosedXML.Excel;
+using ExamScheduleApp.Model;
 using ExamScheduleApp.Utilities;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Data.SQLite;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
@@ -23,19 +25,23 @@ namespace ExamScheduleApp.View
         private List<DataGridColumn> _originalColumnOrder;
         private ObservableCollection<ExamSchedule> _exams;
         private ExamSchedule _selectedItem;
+        private readonly SimpleDatabaseHelper _dbHelper;
 
         public List<int> ExamsToDelete { get; private set; } = new List<int>();
 
-        public ScheduleTableWindow(ObservableCollection<ExamSchedule> exams)
+        public ScheduleTableWindow(ObservableCollection<ExamSchedule> exams, SimpleDatabaseHelper dbhelper)
         {
             InitializeComponent();
             InitializeColumnMapping();
 
             _originalColumnOrder = new List<DataGridColumn>(ExamsDataGrid.Columns);
             _exams = exams;
+            _dbHelper = dbhelper;
             InitializeDataGrid(_exams);
 
             SortColumnComboBox.SelectedIndex = 0;
+
+            ExamsDataGrid.CellEditEnding += ExamsDataGrid_CellEditEnding;
         }
 
         private void InitializeColumnMapping()
@@ -211,6 +217,74 @@ namespace ExamScheduleApp.View
                     generateButton.Content = originalText;
                     this.Cursor = Cursors.Arrow;
                 }
+            }
+        }
+        /// <summary>
+        /// Срабатывает после окончания редактирования ячейки
+        /// </summary>
+        private void ExamsDataGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        {
+            if (e.EditAction == DataGridEditAction.Commit && e.Row.DataContext is ExamSchedule exam)
+            {
+                try
+                {
+                    // Обновляем запись в базе данных
+                    UpdateExamInDatabase(exam);
+
+                    Logger.Info($"Обновлён экзамен ID {exam.Id} в таблице");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Ошибка при обновлении экзамена ID {exam.Id}", ex);
+                    MessageBox.Show($"Ошибка сохранения изменений: {ex.Message}",
+                                  "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void UpdateExamInDatabase(ExamSchedule exam)
+        {
+            if (exam == null || exam.Id <= 0) return;
+
+            try
+            {
+                using (var conn = new SQLiteConnection(_dbHelper.GetConnectionString())) // используем старый метод
+                {
+                    conn.Open();
+                    string query = @"
+                UPDATE Exams 
+                SET Teacher1Id = @t1, 
+                    Teacher2Id = @t2, 
+                    SubjectId = @s, 
+                    GroupId = @g,
+                    Classroom = @c,
+                    Department = @d,
+                    ExamDate = @date,
+                    ExamTime = @time,
+                    ExamType = @type
+                WHERE Id = @id";
+
+                    using (var cmd = new SQLiteCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@id", exam.Id);
+                        cmd.Parameters.AddWithValue("@t1", exam.Teacher1Id);
+                        cmd.Parameters.AddWithValue("@t2", (object)exam.Teacher2Id ?? DBNull.Value);
+                        cmd.Parameters.AddWithValue("@s", exam.SubjectId);
+                        cmd.Parameters.AddWithValue("@g", exam.GroupId);
+                        cmd.Parameters.AddWithValue("@c", exam.Classroom ?? "");
+                        cmd.Parameters.AddWithValue("@d", exam.DepartmentName ?? "");
+                        cmd.Parameters.AddWithValue("@date", exam.ExamDate);
+                        cmd.Parameters.AddWithValue("@time", exam.ExamTime);
+                        cmd.Parameters.AddWithValue("@type", exam.ExamType);
+
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("UpdateExamInDatabase", ex);
+                throw;
             }
         }
     }

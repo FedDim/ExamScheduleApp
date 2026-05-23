@@ -288,7 +288,7 @@ namespace ExamScheduleApp
 
         private void ShowScheduleTable_Click(object sender, RoutedEventArgs e)
         {
-            var scheduleTableWindow = new ScheduleTableWindow(_exams);
+            var scheduleTableWindow = new ScheduleTableWindow(_exams, dbhelper);
             scheduleTableWindow.Owner = this;
             scheduleTableWindow.Closed += ScheduleTableWindow_Closed;
             scheduleTableWindow.ShowDialog();
