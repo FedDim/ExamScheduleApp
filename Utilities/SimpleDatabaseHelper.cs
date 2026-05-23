@@ -322,6 +322,54 @@ namespace ExamScheduleApp.Utilities
             catch (Exception ex) { Logger.Error($"DeleteTeacher {teacherId}", ex); }
         }
 
+        /// <summary>
+        /// Возвращает аудиторию преподавателя по его ID (из SQL Server)
+        /// </summary>
+        public string GetTeacherClassroom(int teacherId)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_serverConnectionString))
+                using (var cmd = new SqlCommand("SELECT Classroom FROM Teachers WHERE Id = @id", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@id", teacherId);
+                    var result = cmd.ExecuteScalar();
+                    return result?.ToString() ?? "";
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"GetTeacherClassroom({teacherId})", ex);
+                return "";
+            }
+        }
+
+        /// <summary>
+        /// Перегрузка — по имени преподавателя
+        /// </summary>
+        public string GetTeacherClassroom(string teacherName)
+        {
+            if (string.IsNullOrWhiteSpace(teacherName)) return "";
+
+            try
+            {
+                using (var conn = new SqlConnection(_serverConnectionString))
+                using (var cmd = new SqlCommand("SELECT Classroom FROM Teachers WHERE Name = @name", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@name", teacherName);
+                    var result = cmd.ExecuteScalar();
+                    return result?.ToString() ?? "";
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"GetTeacherClassroom({teacherName})", ex);
+                return "";
+            }
+        }
+
         // ==================== SUBJECTS ====================
         public void AddSubject(Subject subject)
         {

@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 
 namespace ExamScheduleApp
@@ -28,6 +29,7 @@ namespace ExamScheduleApp
         public MainWindow()
         {
             InitializeComponent();
+            cbTeachers.SelectionChanged += CbTeachers_SelectionChanged;
 
             Logger.Info("=== Приложение запущено ===");
 
@@ -396,6 +398,26 @@ namespace ExamScheduleApp
             RefreshExamsData();
             MessageBox.Show("Расписание обновлено", "Информация",
                 MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        /// <summary>
+        /// Автоматически подставляет аудиторию преподавателя при выборе
+        /// </summary>
+        private void CbTeachers_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (cbTeachers.SelectedItem is Teacher selectedTeacher && !string.IsNullOrEmpty(selectedTeacher.Classroom))
+            {
+                txtClassroom.Text = selectedTeacher.Classroom;
+            }
+            else if (cbTeachers.SelectedValue is int teacherId && teacherId > 0)
+            {
+                // Если в модели Classroom пустой — запрашиваем из БД
+                string classroom = dbhelper.GetTeacherClassroom(teacherId);
+                if (!string.IsNullOrEmpty(classroom))
+                {
+                    txtClassroom.Text = classroom;
+                }
+            }
         }
 
         #region Буфер
